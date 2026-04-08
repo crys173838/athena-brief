@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Athena — Crystal's Daily Briefing</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f2ec;--surface:#fff;--card:#fff;--card-alt:#faf8f4;
+  --border:rgba(0,0,0,0.08);--border-mid:rgba(0,0,0,0.14);
+  --gold:#9a6f28;--gold-light:#c49a3c;--gold-dim:rgba(154,111,40,0.10);
+  --teal:#1a7a74;--teal-dim:rgba(26,122,116,0.10);
+  --rose:#b84055;--rose-dim:rgba(184,64,85,0.10);
+  --sage:#3a7d44;--sage-dim:rgba(58,125,68,0.10);
+  --lavender:#5c4ea0;--lavender-dim:rgba(92,78,160,0.10);
+  --text:#1a1814;--text-dim:#4a4540;--text-muted:#8a8278;
+  --panel-w:300px;--chat-w:340px;
+  --font-d:'Syne',sans-serif;--font-b:'Cormorant Garamond',serif;--font-m:'DM Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--font-b);font-size:16px;line-height:1.75;display:flex;flex-direction:column;min-height:100vh}
+
+/* ── LAYOUT ── */
+.app-shell{display:flex;flex:1;min-height:0;position:relative}
+.main-col{flex:1;min-width:0;display:flex;flex-direction:column;overflow-y:auto;height:100vh}
+.side-panels{display:flex;flex-direction:column;height:100vh;position:sticky;top:0;flex-shrink:0}
+
+/* ── HISTORY PANEL ── */
+.history-panel{width:var(--panel-w);background:var(--surface);border-left:1px solid var(--border-mid);display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+.hp-header{padding:14px 14px 10px;border-bottom:1px solid var(--border);background:var(--card-alt);flex-shrink:0}
+.hp-title{font-family:var(--font-d);font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.04em;margin-bottom:2px}
+.hp-sub{font-family:var(--font-m);font-size:8px;color:var(--text-muted);letter-spacing:.08em}
+.hp-count{font-family:var(--font-m);font-size:8px;color:var(--teal);letter-spacing:.06em;margin-top:4px}
+.hp-body{flex:1;overflow-y:auto;padding:8px}
+.hp-body::-webkit-scrollbar{width:3px}.hp-body::-webkit-scrollbar-thumb{background:var(--border-mid);border-radius:2px}
+.hp-empty{padding:20px 14px;text-align:center;font-family:var(--font-m);font-size:10px;color:var(--text-muted);letter-spacing:.08em;line-height:1.8}
+.hp-card{background:var(--card);border:1px solid var(--border);border-radius:5px;margin-bottom:6px;overflow:hidden;transition:border-color .15s}
+.hp-card:hover{border-color:var(--border-mid)}.hp-card.active-version{border-color:var(--gold)}.hp-archived{opacity:.5}
+.hp-card-head{padding:8px 10px 6px;cursor:pointer}
+.hp-version-label{font-family:var(--font-m);font-size:8px;letter-spacing:.1em;color:var(--gold);text-transform:uppercase;margin-bottom:2px}
+.hp-date{font-family:var(--font-m);font-size:9px;color:var(--text-dim)}.hp-time{font-family:var(--font-m);font-size:8px;color:var(--text-muted)}
+.hp-archive-badge{display:inline-block;font-family:var(--font-m);font-size:7px;background:var(--teal-dim);color:var(--teal);padding:1px 5px;border-radius:2px;margin-left:4px;text-transform:uppercase}
+.hp-actions{display:flex;border-top:1px solid var(--border)}
+.hp-btn{flex:1;background:transparent;border:none;border-right:1px solid var(--border);padding:5px 4px;font-family:var(--font-m);font-size:8px;letter-spacing:.06em;color:var(--text-muted);cursor:pointer;transition:all .15s;text-align:center;text-transform:uppercase}
+.hp-btn:last-child{border-right:none}.hp-btn:hover{background:var(--card-alt);color:var(--text-dim)}.hp-btn.load:hover{color:var(--gold)}.hp-btn.arch:hover{color:var(--teal)}.hp-btn.del:hover{color:var(--rose);background:var(--rose-dim)}
+
+/* ── CHAT PANEL ── */
+.chat-panel{width:var(--panel-w);background:var(--surface);border-left:1px solid var(--border-mid);display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+.chat-header{padding:12px 14px 10px;border-bottom:1px solid var(--border);background:var(--card-alt);flex-shrink:0}
+.chat-title{font-family:var(--font-d);font-size:12px;font-weight:700;color:var(--teal);letter-spacing:.04em;margin-bottom:2px}
+.chat-sub{font-family:var(--font-m);font-size:8px;color:var(--text-muted);letter-spacing:.06em}
+.chat-messages{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+.chat-messages::-webkit-scrollbar{width:3px}.chat-messages::-webkit-scrollbar-thumb{background:var(--border-mid);border-radius:2px}
+.chat-msg{max-width:90%;padding:9px 12px;border-radius:6px;font-size:13px;line-height:1.6}
+.chat-msg.user{background:var(--gold-dim);border:1px solid rgba(154,111,40,.2);color:var(--text);align-self:flex-end;font-family:var(--font-b)}
+.chat-msg.athena{background:var(--teal-dim);border:1px solid rgba(26,122,116,.2);color:var(--text);align-self:flex-start;font-family:var(--font-b)}
+.chat-msg.athena strong{color:var(--teal)}
+.chat-msg.athena a{color:var(--teal);font-size:12px}
+.chat-msg-label{font-family:var(--font-m);font-size:8px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;opacity:.7}
+.chat-typing{display:flex;gap:3px;padding:4px 0}
+.chat-typing span{width:4px;height:4px;background:var(--teal);border-radius:50%;animation:dotP 1.2s infinite}
+.chat-typing span:nth-child(2){animation-delay:.2s}.chat-typing span:nth-child(3){animation-delay:.4s}
+.chat-input-area{border-top:1px solid var(--border);padding:10px;display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+.chat-context-bar{display:flex;gap:4px;flex-wrap:wrap}
+.chat-ctx-chip{font-family:var(--font-m);font-size:8px;color:var(--text-muted);border:1px solid var(--border);border-radius:3px;padding:2px 6px;cursor:pointer;transition:all .15s;white-space:nowrap;letter-spacing:.04em}
+.chat-ctx-chip:hover{border-color:var(--teal);color:var(--teal)}.chat-ctx-chip.selected{background:var(--teal-dim);border-color:var(--teal);color:var(--teal)}
+.chat-row{display:flex;gap:6px}
+.chat-input{flex:1;font-family:var(--font-b);font-size:14px;color:var(--text);background:var(--card-alt);border:1px solid var(--border-mid);border-radius:4px;padding:8px 10px;resize:none;height:60px;line-height:1.5}
+.chat-input:focus{outline:none;border-color:var(--teal)}
+.chat-send{background:var(--teal);color:#fff;border:none;border-radius:4px;padding:0 14px;font-family:var(--font-m);font-size:11px;letter-spacing:.08em;cursor:pointer;transition:all .2s;flex-shrink:0}
+.chat-send:hover{background:var(--gold)}.chat-send:disabled{opacity:.4;cursor:not-allowed}
+.chat-clear{font-family:var(--font-m);font-size:8px;color:var(--text-muted);background:transparent;border:none;cursor:pointer;letter-spacing:.06em;text-decoration:underline;text-align:center}
+.chat-clear:hover{color:var(--rose)}
+.chat-empty{padding:20px 14px;text-align:center;font-family:var(--font-m);font-size:10px;color:var(--text-muted);letter-spacing:.06em;line-height:1.9}
+
+/* ── HEADER ── */
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:24px 24px 18px;text-align:center}
+.header-eyebrow{font-family:var(--font-m);font-size:9px;letter-spacing:.25em;color:var(--gold);text-transform:uppercase;margin-bottom:6px;opacity:0;animation:fadeUp .5s ease forwards .1s}
+.header-title{font-family:var(--font-d);font-size:clamp(22px,4vw,34px);font-weight:800;letter-spacing:-.02em;color:var(--gold);opacity:0;animation:fadeUp .5s ease forwards .2s}
+.header-sub{font-size:13px;font-style:italic;color:var(--text-muted);margin-top:3px;opacity:0;animation:fadeUp .5s ease forwards .3s}
+.header-date{font-family:var(--font-m);font-size:10px;color:var(--text-muted);letter-spacing:.08em;margin-top:6px;opacity:0;animation:fadeUp .5s ease forwards .35s}
+
+/* ── SECTION INDEX ── */
+.section-index{background:var(--card-alt);border-bottom:1px solid var(--border);padding:10px 20px;opacity:0;animation:fadeUp .5s ease forwards .4s}
+.section-index-label{font-family:var(--font-m);font-size:8px;letter-spacing:.2em;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px}
+.section-index-grid{display:flex;flex-wrap:wrap;gap:3px 8px}
+.index-chip{font-family:var(--font-m);font-size:9px;color:var(--text-muted);letter-spacing:.04em;cursor:pointer;transition:color .15s;white-space:nowrap}
+.index-chip:hover{color:var(--gold)}.index-sep{color:var(--border-mid);font-size:9px;line-height:1.6}
+
+/* ── ACTION BAR ── */
+.action-bar{background:var(--surface);border-bottom:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:14px 24px 12px;gap:8px;opacity:0;animation:fadeUp .5s ease forwards .45s}
+.btn-generate{background:linear-gradient(135deg,var(--gold-light) 0%,var(--gold) 100%);color:#fff;border:none;padding:12px 32px;font-family:var(--font-d);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:3px;cursor:pointer;transition:all .2s;width:100%;max-width:320px;box-shadow:0 2px 10px rgba(154,111,40,.22)}
+.btn-generate:hover{transform:translateY(-1px);box-shadow:0 5px 18px rgba(154,111,40,.32)}.btn-generate:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-hint{font-family:var(--font-m);font-size:9px;color:var(--text-muted);letter-spacing:.08em}
+
+/* ── STATUS ROW ── */
+.status-row{background:var(--surface);border-bottom:1px solid var(--border);display:none;align-items:center;justify-content:center;gap:16px;padding:8px 24px;flex-wrap:wrap}
+.status-row.visible{display:flex}
+.status-chip{display:flex;align-items:center;gap:5px;font-family:var(--font-m);font-size:9px;letter-spacing:.08em;color:var(--text-muted)}
+.status-dot{width:5px;height:5px;border-radius:50%;background:var(--text-muted)}
+.status-dot.active{background:var(--sage);box-shadow:0 0 4px var(--sage)}.status-dot.warn{background:var(--gold-light);box-shadow:0 0 4px var(--gold-light)}.status-dot.alert{background:var(--rose);box-shadow:0 0 4px var(--rose)}
+
+/* ── TOOLBAR ── */
+.toolbar{background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding:8px 24px 10px}
+.btn-tool{display:flex;align-items:center;gap:5px;background:var(--card-alt);border:1px solid var(--border-mid);color:var(--text-dim);padding:7px 14px;font-family:var(--font-m);font-size:10px;letter-spacing:.06em;text-transform:uppercase;border-radius:3px;cursor:pointer;transition:all .18s}
+.btn-tool:hover{border-color:var(--gold);color:var(--gold);background:var(--gold-dim)}.btn-tool.active{border-color:var(--teal);color:var(--teal);background:var(--teal-dim)}
+
+/* ── AUDIO PANEL ── */
+.audio-panel{display:none;margin:10px 18px;background:var(--surface);border:1px solid var(--border-mid);border-radius:6px;padding:14px 18px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.audio-panel.visible{display:block}
+.audio-title{font-family:var(--font-m);font-size:9px;letter-spacing:.12em;color:var(--gold);text-transform:uppercase;margin-bottom:10px}
+.audio-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.btn-play{background:var(--gold);color:#fff;border:none;width:36px;height:36px;border-radius:50%;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.btn-play:hover{transform:scale(1.08)}
+.audio-progress-wrap{flex:1;min-width:100px}
+.audio-track{height:4px;background:var(--border-mid);border-radius:2px;cursor:pointer;margin-bottom:5px}
+.audio-fill{height:100%;background:linear-gradient(90deg,var(--gold-light),var(--teal));border-radius:2px;width:0%;pointer-events:none;transition:width .1s linear}
+.audio-time{font-family:var(--font-m);font-size:9px;color:var(--text-muted)}
+.audio-speed{display:flex;gap:4px}
+.btn-speed{background:var(--card-alt);border:1px solid var(--border);color:var(--text-muted);padding:2px 7px;font-family:var(--font-m);font-size:9px;border-radius:2px;cursor:pointer;transition:all .15s}
+.btn-speed.active,.btn-speed:hover{border-color:var(--gold);color:var(--gold);background:var(--gold-dim)}
+.audio-nav{margin-top:10px;display:flex;gap:4px;flex-wrap:wrap}
+.btn-jump{background:var(--card-alt);border:1px solid var(--border);color:var(--text-muted);padding:2px 9px;font-family:var(--font-m);font-size:8px;letter-spacing:.05em;border-radius:2px;cursor:pointer;transition:all .15s;text-transform:uppercase}
+.btn-jump:hover{border-color:var(--teal);color:var(--teal)}.btn-jump.playing{border-color:var(--teal);color:var(--teal);background:var(--teal-dim)}
+
+/* ── PROGRESS ── */
+.progress-wrap{display:none;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 24px}
+.progress-wrap.visible{display:block}
+.progress-track{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--gold-light),var(--teal));width:0%;transition:width .35s ease}
+.progress-label{font-family:var(--font-m);font-size:9px;color:var(--gold);letter-spacing:.1em;margin-top:6px;text-align:center}
+
+/* ── SECTIONS ── */
+.sections-wrap{padding:14px 16px 60px;max-width:860px;margin:0 auto;width:100%;display:flex;flex-direction:column;gap:9px}
+.group-label{font-family:var(--font-m);font-size:8px;letter-spacing:.2em;color:var(--text-muted);text-transform:uppercase;padding:12px 4px 6px;border-top:1px solid var(--border);margin-top:2px}
+.section-card{background:var(--card);border:1px solid var(--border);border-radius:6px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.04);transition:border-color .18s,box-shadow .18s;opacity:0;transform:translateY(8px)}
+.section-card.revealed{animation:cardIn .4s ease forwards}
+.section-card:hover{border-color:var(--border-mid);box-shadow:0 2px 10px rgba(0,0,0,.07)}
+.section-card.playing-now{border-color:var(--teal)}
+.s-head{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none;background:var(--card-alt)}
+.s-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0}
+.s-title{font-family:var(--font-d);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim);flex:1}
+.s-desc{font-family:var(--font-m);font-size:8px;color:var(--text-muted);letter-spacing:.04em;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s-badge{font-family:var(--font-m);font-size:8px;letter-spacing:.1em;padding:1px 7px;border-radius:2px;text-transform:uppercase}
+.badge-critical{background:var(--rose-dim);color:var(--rose);border:1px solid rgba(184,64,85,.18)}
+.badge-new{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(26,122,116,.18)}
+.badge-core{background:var(--gold-dim);color:var(--gold);border:1px solid rgba(154,111,40,.18)}
+.badge-growth{background:var(--sage-dim);color:var(--sage);border:1px solid rgba(58,125,68,.18)}
+.badge-legacy{background:var(--lavender-dim);color:var(--lavender);border:1px solid rgba(92,78,160,.18)}
+.s-ask{font-family:var(--font-m);font-size:8px;color:var(--teal);border:1px solid rgba(26,122,116,.3);border-radius:3px;padding:1px 8px;cursor:pointer;transition:all .15s;margin-left:6px;white-space:nowrap;flex-shrink:0}
+.s-ask:hover{background:var(--teal-dim)}
+.s-chev{color:var(--text-muted);font-size:10px;transition:transform .2s;flex-shrink:0}
+.section-card.open .s-chev{transform:rotate(180deg)}
+.s-body{display:none;padding:0 16px 16px;border-top:1px solid var(--border)}
+.section-card.open .s-body{display:block}
+.s-loading{display:flex;align-items:center;gap:8px;padding:14px 0 4px;font-family:var(--font-m);font-size:10px;color:var(--text-muted)}
+.dot-loader{display:flex;gap:3px}
+.dot-loader span{width:4px;height:4px;background:var(--gold);border-radius:50%;animation:dotP 1.2s infinite}
+.dot-loader span:nth-child(2){animation-delay:.2s}.dot-loader span:nth-child(3){animation-delay:.4s}
+
+/* ── CONTENT ── */
+.brief-content{padding-top:12px;font-size:15px;line-height:1.8;color:var(--text)}
+.brief-content p{margin-bottom:10px}.brief-content p:last-child{margin-bottom:0}
+.brief-content strong{color:var(--gold);font-weight:600}
+.brief-content a{color:var(--teal);text-decoration:none;border-bottom:1px solid rgba(26,122,116,.28)}
+.brief-content a:hover{border-color:var(--teal)}
+.brief-content ul{list-style:none;margin:6px 0}
+.brief-content ul li{padding:3px 0 3px 16px;position:relative;font-size:14px;color:var(--text-dim)}
+.brief-content ul li::before{content:'—';position:absolute;left:0;color:var(--gold-light);font-size:11px}
+.hl-box{background:#fdf8ec;border-left:3px solid var(--gold-light);padding:10px 14px;margin:12px 0;border-radius:0 4px 4px 0;font-size:14px;color:var(--text-dim)}
+.al-box{background:#fdf0f2;border-left:3px solid var(--rose);padding:10px 14px;margin:12px 0;border-radius:0 4px 4px 0;font-size:14px;color:var(--text-dim)}
+.ac-box{background:#f0f7f6;border-left:3px solid var(--teal);padding:10px 14px;margin:12px 0;border-radius:0 4px 4px 0;font-size:14px;color:var(--text-dim)}
+.translation-box{margin-top:14px;background:#f0f7f6;border:1px solid rgba(26,122,116,.18);border-left:3px solid var(--teal);border-radius:0 5px 5px 0;padding:12px 14px}
+.trans-label{font-family:var(--font-m);font-size:8px;letter-spacing:.14em;color:var(--teal);text-transform:uppercase;margin-bottom:6px}
+.trans-text{font-size:14px;line-height:1.7;color:var(--text-dim);font-style:italic}
+.trans-text strong{color:var(--teal);font-style:normal}
+.err-content{padding-top:12px;font-family:var(--font-m);font-size:11px;color:var(--rose)}
+
+/* ── FOOTER ── */
+.footer{text-align:center;padding:16px 24px 28px;font-family:var(--font-m);font-size:9px;color:var(--text-muted);letter-spacing:.08em;border-top:1px solid var(--border);background:var(--surface)}
+.deploy-note{background:var(--gold-dim);border:1px solid rgba(154,111,40,.2);border-radius:4px;padding:10px 16px;margin:8px 0 0;font-family:var(--font-m);font-size:9px;color:var(--gold);letter-spacing:.05em;line-height:1.7;text-align:left}
+.deploy-note a{color:var(--teal)}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes cardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dotP{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border-mid);border-radius:2px}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){.side-panels{display:none}}
+@media(max-width:480px){.header{padding:20px 14px 14px}.section-index{padding:10px 14px}}
+@media print{.side-panels,.action-bar,.toolbar,.audio-panel,.progress-wrap,.status-row,.footer,.section-index{display:none!important}.app-shell{display:block}.main-col{height:auto;overflow:visible}.section-card{break-inside:avoid;opacity:1!important;transform:none!important;border:1px solid #ddd;margin-bottom:12px;box-shadow:none}.s-body{display:block!important}.s-chev,.s-ask{display:none}.group-label{border-top:1px solid #ddd}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-eyebrow">Powered by Athena Intelligence</div>
+  <h1 class="header-title">ATHENA DAILY BRIEF</h1>
+  <p class="header-sub">Your personal command center, Crystal</p>
+  <p class="header-date" id="headerDate">—</p>
+</div>
+
+<div class="section-index">
+  <div class="section-index-label">Today's 26 Sections — tap any to jump</div>
+  <div class="section-index-grid" id="sectionIndex"></div>
+</div>
+
+<div class="status-row" id="statusRow">
+  <div class="status-chip"><span class="status-dot" id="dotCareer"></span>CAREER</div>
+  <div class="status-chip"><span class="status-dot" id="dotDebt"></span>DEBT</div>
+  <div class="status-chip"><span class="status-dot" id="dotHealth"></span>HEALTH</div>
+  <div class="status-chip"><span class="status-dot" id="dotMom"></span>MOM</div>
+  <div class="status-chip"><span class="status-dot" id="dotInvest"></span>INVEST</div>
+  <div class="status-chip"><span class="status-dot" id="dotMindset"></span>MINDSET</div>
+</div>
+
+<div class="action-bar">
+  <button class="btn-generate" id="btnGenerate" onclick="generateBriefing()">⚡ Generate Today's Briefing</button>
+  <span class="btn-hint">TAP ONCE — ATHENA DOES THE REST</span>
+</div>
+
+<div class="toolbar" id="toolbar" style="display:none;">
+  <button class="btn-tool" id="btnAudio" onclick="toggleAudio()">🎧 Listen</button>
+  <button class="btn-tool" onclick="downloadPDF()">📄 Download PDF</button>
+  <button class="btn-tool" onclick="generateBriefing()">🔄 Regenerate</button>
+</div>
+
+<div class="audio-panel" id="audioPanel">
+  <div class="audio-title">🎧 Athena Audio Brief</div>
+  <div class="audio-controls">
+    <button class="btn-play" id="btnPlay" onclick="togglePlay()">▶</button>
+    <div class="audio-progress-wrap">
+      <div class="audio-track" id="audioTrack" onclick="seekAudio(event)">
+        <div class="audio-fill" id="audioFill"></div>
+      </div>
+      <div class="audio-time" id="audioTime">0:00 / 0:00</div>
+    </div>
+    <div class="audio-speed">
+      <button class="btn-speed" onclick="setSpeed(0.85)">0.85×</button>
+      <button class="btn-speed active" onclick="setSpeed(1)">1×</button>
+      <button class="btn-speed" onclick="setSpeed(1.1)">1.1×</button>
+      <button class="btn-speed" onclick="setSpeed(1.25)">1.25×</button>
+    </div>
+  </div>
+  <div class="audio-nav" id="audioNav"></div>
+</div>
+
+<div class="progress-wrap" id="progressWrap">
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-label" id="progressLabel">Initializing Athena...</div>
+</div>
+
+<!-- APP SHELL -->
+<div class="app-shell">
+  <div class="main-col">
+    <div class="sections-wrap" id="sectionsWrap"></div>
+    <div class="footer">
+      ATHENA v6.0 — 26 SECTIONS — CRYSTAL ROJAS INTELLIGENCE SYSTEM<br>
+      Live News · Professional Audio · PDF · Citations · Plain-English Translation · Version History · Ask Athena Chat
+      <div class="deploy-note">
+        📌 <strong>Get a permanent bookmarkable URL (free, 2 min):</strong>
+        1) Download this file &nbsp;·&nbsp; 2) Go to <a href="https://app.netlify.com/drop" target="_blank">app.netlify.com/drop</a> &nbsp;·&nbsp; 3) Drag &amp; drop the file &nbsp;·&nbsp; 4) Copy your live URL and bookmark it on every device.
+      </div>
+    </div>
+  </div>
+
+  <!-- SIDE PANELS: History + Chat stacked -->
+  <div class="side-panels">
+
+    <!-- VERSION HISTORY -->
+    <div class="history-panel">
+      <div class="hp-header">
+        <div class="hp-title">📋 Briefing History</div>
+        <div class="hp-sub">ALL VERSIONS SAVED — NEVER AUTO-DELETED</div>
+        <div class="hp-count" id="hpCount">0 briefings saved</div>
+      </div>
+      <div class="hp-body" id="hpBody">
+        <div class="hp-empty">No briefings yet.<br><br>Generate your first and<br>it will appear here.</div>
+      </div>
+    </div>
+
+    <!-- ASK ATHENA CHAT -->
+    <div class="chat-panel">
+      <div class="chat-header">
+        <div class="chat-title">💬 Ask Athena</div>
+        <div class="chat-sub">ASK ANYTHING ABOUT TODAY'S BRIEF</div>
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-empty">Ask Athena anything about today's briefing.<br><br>Tap a section chip below to focus on a topic, or just type your question.</div>
+      </div>
+      <div class="chat-input-area">
+        <div class="chat-context-bar" id="chatContextBar"></div>
+        <div class="chat-row">
+          <textarea class="chat-input" id="chatInput" placeholder="Ask about any section..." rows="2" onkeydown="chatKeyDown(event)"></textarea>
+          <button class="chat-send" id="chatSend" onclick="sendChat()">Ask →</button>
+        </div>
+        <button class="chat-clear" onclick="clearChat()">Clear conversation</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── DATE ──────────────────────────────────────────────────────────────────
+const now=new Date();
+const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const dateStr=`${DAYS[now.getDay()]}, ${MONS[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+const timeStr=now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+document.getElementById('headerDate').textContent=`${dateStr} — Carol Stream, IL`;
+
+// ── CONTEXT ───────────────────────────────────────────────────────────────
+const CTX=`CRYSTAL'S VERIFIED FACTS:
+- Senior PM, PMP + Lean Six Sigma certified. Bilingual English/Spanish.
+- Pay: $48/hr, 37.5 hrs/week. Husband Leo: $24/hr, 40 hrs/week. Combined net ~$9,200–$9,640/month. Income stabilizes April 28, 2026.
+- Household: Crystal, Leo, son Lito (St. Leonard School, $545/month tuition), adult brother (unemployed, cannot drive).
+- Debt: ~$20K across Credit One, Capital One x2, Milestone, Indigo, Care Credit x2, Oportun $153.58/mo, Affirm x4, Klarna, ProgressiveLease $203.98/mo. Credit score 620. Zero savings.
+- Food spend: Uber Eats ~$500–600/mo + restaurants ~$1,200/mo = ~$2,200–2,400/month total.
+- Mom: IL senior rehab. IL Medicaid income limit $1,330/month; asset limit $17,500. Status UNVERIFIED.
+- Goals: $1M net worth; 180 lbs; passive income. Children's events business (Leo leads). Temp-to-perm ~Oct 2026.
+- Location: Carol Stream, IL (DuPage County, near Chicago ORD/MDW).
+
+MANDATORY RULES — APPLY TO EVERY SECTION:
+1. CITATIONS REQUIRED: Every factual claim must be followed by a hyperlink in format [Source Name](URL). Use real, known URLs only. No fabricated links.
+2. NO HALLUCINATION: Do not invent headlines, bill names, rates, grant amounts, or statistics. If uncertain, say "verify at [Source](URL)."
+3. DIRECTIONAL LANGUAGE for rates/markets: say "rates have been elevated" not a fabricated percentage.
+4. INSPIRATION RULE: Only say Crystal is exceptional if grounded in her verified facts above. Her load IS heavy, her skills ARE marketable — say that factually.
+5. TRANSLATION REQUIRED: Every section must end with TRANSLATION_START ... TRANSLATION_END containing a plain-English summary of jargon used.`;
+
+// ── CITATION SUFFIX added to every prompt ────────────────────────────────
+const CITE=`
+
+CITATION FORMAT — MANDATORY FOR EVERY CLAIM:
+After every factual statement, add a source link in format: [Source](URL)
+Examples:
+- "High-yield savings accounts are currently offering competitive rates [Bankrate](https://www.bankrate.com)"
+- "The FHA minimum credit score for 3.5% down is 580 [HUD](https://www.hud.gov)"
+- "ProPublica investigates government accountability [ProPublica](https://www.propublica.org)"
+Only use URLs you are confident exist. If unsure of exact URL, link to the homepage of a known domain.
+DO NOT skip citations — every paragraph needs at least one source link.`;
+
+// ── SECTIONS — ordered per Crystal's request ─────────────────────────────
+const SECTIONS=[
+{group:"TODAY'S INTELLIGENCE",icon:'📰',title:'News Stack of the Day',badge:'core',key:'news',
+ desc:'AP, Reuters, ProPublica, BBC, Al Jazeera, DW — live current news, no spin.',
+ prompt:`${CTX}${CITE}
+SECTION: News Stack of the Day. Today: ${dateStr}.
+IMPORTANT: You are being asked about news as of ${dateStr}. Use your most current knowledge. Do NOT cite 2025 stories as current — acknowledge if you cannot confirm today's specific headlines and direct Crystal to the source.
+
+Deliver 5 distinct items with citations after every claim:
+1) [AP/Reuters — Wire Facts] The most significant verifiable news story this week. If you cannot confirm today's specific headline, describe the ongoing story area and link to [AP News](https://apnews.com) and [Reuters](https://www.reuters.com) to verify.
+2) [ProPublica / The Intercept — Investigative] One accountability story currently being investigated — healthcare, civil rights, financial systems, or government. Link [ProPublica](https://www.propublica.org) or [The Intercept](https://theintercept.com).
+3) [BBC / Al Jazeera / DW — World View] How the international community currently views the United States on a specific issue. Link [BBC](https://www.bbc.com/news), [Al Jazeera](https://www.aljazeera.com), or [DW](https://www.dw.com/en/).
+4) [AllSides / Ground News — Bias Check] On a major current topic: what is left-leaning media emphasizing? What is right-leaning media leaving out and vice versa? Link [AllSides](https://www.allsides.com) and [Ground News](https://ground.news).
+5) [Alternative/Independent] One story being underreported — link [Democracy Now](https://www.democracynow.org), [OpenSecrets](https://www.opensecrets.org), [Consortium News](https://consortiumnews.com), or [POGO](https://www.pogo.org).
+
+TRANSLATION_START
+Plain-English of: wire service, investigative journalism, media bias, narrative framing. Under 80 words.
+TRANSLATION_END`},
+
+{group:null,icon:'📈',title:'Daily Investment Pulse',badge:'new',key:'invest',
+ desc:'Market direction, best first account for beginners, and $25/month growth math.',
+ prompt:`${CTX}${CITE}
+SECTION: Daily Investment Pulse. Today: ${dateStr}.
+UNIQUE FOCUS: Markets and opening Crystal's first investment account. NOT net worth math, NOT real estate.
+
+Deliver with citations after every claim:
+1) General U.S. market direction this week — use directional language, not invented numbers. Verify at [MarketWatch](https://www.marketwatch.com) or [Yahoo Finance](https://finance.yahoo.com).
+2) Best first account for Crystal's profile — pick one: Fidelity, Vanguard, or Acorns. Explain why. Link the recommendation.
+3) $25/month at 7% annual return over 30 years — calculate the actual math and show the result.
+4) One action TODAY to open or fund an account — even $1. Be specific.
+
+Links: [Fidelity](https://www.fidelity.com), [Vanguard](https://www.vanguard.com), [Acorns](https://www.acorns.com), [NerdWallet](https://www.nerdwallet.com/investing).
+
+TRANSLATION_START
+Plain-English of index fund, annual return, compound growth, brokerage account. Under 80 words.
+TRANSLATION_END`},
+
+{group:null,icon:'🌱',title:"Lito's World",badge:'legacy',key:'lito',
+ desc:"Financial literacy for Lito, a family connection moment, and custodial account math.",
+ prompt:`${CTX}${CITE}
+SECTION: Lito's World. Today: ${dateStr}.
+UNIQUE FOCUS: Lito's financial education and family connection. NOT Crystal's own finances.
+
+Deliver with citations:
+1) One age-appropriate financial concept for Lito — make it fun and interactive. Link a resource [Greenlight](https://www.greenlightcard.com) or [Khan Academy](https://www.khanacademy.org).
+2) One family connection moment this week — low cost, high meaning, culturally resonant.
+3) $25/month in a custodial index fund from childhood to 18 at 7% — calculate the actual projected value and show the math.
+4) One real, verified thing Crystal is modeling for Lito right now. Do not inflate — state what is factually true.
+
+Links: [Fidelity Youth Account](https://www.fidelity.com/go/youth-account/overview), [Greenlight](https://www.greenlightcard.com).
+
+TRANSLATION_START
+Plain-English of custodial account, compound growth, index fund for a parent explaining to a child. Under 70 words.
+TRANSLATION_END`},
+
+{group:"MINDSET & PSYCHOLOGY",icon:'🧠',title:'Mindset & Behavior Mirror',badge:'core',key:'mindset',
+ desc:'One scarcity belief active today, a grounded reframe, and an honest truth.',
+ prompt:`${CTX}${CITE}
+SECTION: Mindset & Behavior Mirror. Today: ${dateStr}.
+UNIQUE FOCUS: Psychological wealth patterns and reframes. NOT spending triggers (separate section), NOT time management (separate section).
+
+Crystal profile: high inner critic, resentment masked as professionalism, fear rest = irrelevance, people-pleasing tendencies. Healing intentionally.
+
+Deliver with citations where applicable:
+1) One scarcity belief likely active today — specific to her verified situation.
+2) A direct, grounded reframe — not generic positivity. Cite the psychological principle if relevant.
+3) One empowering truth about where she is — grounded only in verified facts from her profile.
+4) One sentence only Athena, who knows her full picture, would say.
+
+Link: [Morgan Housel — Psychology of Money](https://www.morganhousel.com).
+INSPIRATION RULE: She is managing caregiving + debt recovery + full-time work + parenting simultaneously and still showing up. Say THAT specifically, not vague greatness claims.
+
+TRANSLATION_START
+Plain-English of scarcity mindset, abundance thinking, cognitive reframe, inner critic. Under 70 words.
+TRANSLATION_END`},
+
+{group:"FAMILY & CARE",icon:'🏥',title:"Mom's Care Corner",badge:'core',key:'mom',
+ desc:'Advocacy tips, questions for facility staff, and caregiver self-care.',
+ prompt:`${CTX}${CITE}
+SECTION: Mom's Care Corner. Today: ${dateStr}.
+UNIQUE FOCUS: Advocacy, visit prep, caregiver emotional support. NOT Medicaid eligibility (separate section).
+
+Deliver with citations:
+1) One practical IL senior care advocacy tip this week. Cite source.
+2) Three specific questions Crystal should ask facility staff at her next visit.
+3) One real IL caregiver support resource with link — [Illinois Department on Aging](https://www2.illinois.gov/aging) or [Family Caregiver Alliance](https://www.caregiver.org).
+4) One caregiver self-care reminder — honest, not a platitude. Cite the research if relevant [AARP Caregiver](https://www.aarp.org/caregiving/).
+
+TRANSLATION_START
+Plain-English of skilled nursing facility, patient advocate, discharge planning, PASRR. Under 70 words.
+TRANSLATION_END`},
+
+{group:null,icon:'📋',title:"Mom's Medicaid Watch",badge:'critical',key:'medicaid',
+ desc:'IL Medicaid enrollment steps, required documents, federal cut risks.',
+ prompt:`${CTX}${CITE}
+SECTION: Mom's Medicaid Watch. Today: ${dateStr}.
+UNIQUE FOCUS: Medicaid eligibility verification and financial/legal protection. NOT general advocacy (separate).
+
+IL Medicaid nursing home facts: income limit $1,330/month, asset limit $17,500, personal needs allowance $60/month.
+
+Deliver with citations after every claim:
+1) Exact steps to verify mom's IL Medicaid enrollment TODAY — who to call, what to ask. Link [Illinois HFS](https://hfs.illinois.gov/medicalclients.html).
+2) Documents Crystal must have on file — list each one concretely.
+3) Current federal Medicaid policy direction and what it generally means for IL nursing homes — describe the direction without inventing bill names. Link [KFF Medicaid](https://www.kff.org/medicaid/).
+4) What to do if mom's income or assets approach the limits. Link [Illinois Legal Aid](https://www.illinoislegalaid.org).
+
+TRANSLATION_START
+Plain-English of Medicaid eligibility, income limit, asset limit, personal needs allowance, spend-down. Under 80 words.
+TRANSLATION_END`},
+
+{group:"INTELLIGENCE & OPPORTUNITY",icon:'🤖',title:'AI & Automation Edge',badge:'new',key:'ai',
+ desc:'Current AI tools for PM work, productized service idea, one automation this week.',
+ prompt:`${CTX}${CITE}
+SECTION: AI & Automation Edge. Today: ${dateStr}.
+UNIQUE FOCUS: AI tools for Crystal's PM skills and passive income. NOT children's events (separate), NOT career salary (separate).
+
+Crystal: Senior PM, AI Prompt Engineering certified (PMI).
+
+Deliver with citations after every claim:
+1) One real AI tool relevant to her PM work or passive income — only tools you are confident exist. Describe what it does and why it fits. Link it.
+2) One specific way to package PM + AI skills into a productized service — concrete, priceable. Suggest a platform to sell it on [Upwork](https://www.upwork.com) or [Contra](https://contra.com).
+3) One personal automation she can implement this week — specific steps.
+4) One AI business niche right now — honest description, no hype. Cite a source.
+
+Links: [Claude.ai](https://claude.ai), [Zapier](https://www.zapier.com), [Make](https://www.make.com), [Notion AI](https://www.notion.so).
+
+TRANSLATION_START
+Plain-English of productized service, agentic AI, automation workflow, no-code, SaaS. Under 80 words.
+TRANSLATION_END`},
+
+{group:"HEALTH & BODY",icon:'🥗',title:'Health & Wellness Pulse',badge:'core',key:'health',
+ desc:'Evidence-based nutrition tip, 10-min movement, Hispanic dish makeover.',
+ prompt:`${CTX}${CITE}
+SECTION: Health & Wellness Pulse. Today: ${dateStr}.
+UNIQUE FOCUS: Evidence-based nutrition and movement. NOT sleep/recovery (separate), NOT stress-spending (separate).
+
+Deliver with citations after every claim:
+1) One evidence-based nutrition tip for sustainable fat loss — cite the scientific consensus. Link [Mayo Clinic](https://www.mayoclinic.org) or [NIH](https://www.nih.gov).
+2) One 10-minute movement idea for a busy workday. Cite a source.
+3) One healthier spin on a classic Hispanic dish the whole family enjoys.
+4) One verified fact about caregiver health. Link [AARP Caregiving](https://www.aarp.org/caregiving/) or [NIH](https://www.nih.gov).
+
+TRANSLATION_START
+Plain-English of macros, caloric deficit, metabolic rate, protein synthesis, nutrient density. Under 70 words.
+TRANSLATION_END`},
+
+{group:null,icon:'💪',title:'Weight & Energy Check-In',badge:'core',key:'weight',
+ desc:'Daily self-assessment: sleep, energy, stress scores and a morning micro-habit.',
+ prompt:`${CTX}${CITE}
+SECTION: Weight & Energy Check-In. Today: ${dateStr}.
+UNIQUE FOCUS: Daily self-assessment for weight, energy, morning momentum. NOT nutrition tips (separate), NOT sleep protocols (separate).
+
+Deliver:
+1) Three self-check questions she can answer right now: sleep quality 1–10, energy 1–10, stress 1–10.
+2) What lower scores predict about food choices and willpower — behavioral science, cite source [APA](https://www.apa.org) or similar.
+3) One micro-habit to do before 9am to win the morning.
+4) One honest accountability statement — direct, warm, not preachy.
+
+Keep under 200 words total.
+
+TRANSLATION_START
+Plain-English of any behavioral or physiological terms used. Under 60 words.
+TRANSLATION_END`},
+
+{group:null,icon:'😴',title:'Recovery Signal',badge:'new',key:'recovery',
+ desc:'Sleep quality self-assessment, recovery protocol, and what to defer if stressed.',
+ prompt:`${CTX}${CITE}
+SECTION: Recovery Signal. Today: ${dateStr}.
+UNIQUE FOCUS: Sleep quality and nervous system recovery. NOT nutrition, NOT spending.
+
+Deliver with citations:
+1) Three sleep quality self-assessment questions for this morning.
+2) What poor sleep means for decision-making and financial risk today — cite behavioral science [Matthew Walker / Huberman Lab](https://hubermanlab.com).
+3) One 5-minute recovery action she can do right now (breathing, cold water, etc.).
+4) What categories of decisions to defer today if stress is high — be specific.
+
+Link: [Huberman Lab](https://hubermanlab.com).
+
+TRANSLATION_START
+Plain-English of cortisol, nervous system regulation, decision fatigue, stress response. Under 70 words.
+TRANSLATION_END`},
+
+{group:"BUSINESS",icon:'🏗️',title:'Business Build Tracker',badge:'growth',key:'biztrack',
+ desc:"Children's events business: next validation step, Leo's role, 90-day milestone.",
+ prompt:`${CTX}${CITE}
+SECTION: Business Build Tracker. Today: ${dateStr}.
+UNIQUE FOCUS: The children's events business — validation, Leo's operational role, 90-day roadmap.
+
+Deliver with citations:
+1) The single next validation action this week — specific and doable. What question does it answer?
+2) Structural model: Leo operates, Crystal architects — what this means in practice day-to-day.
+3) One real minority/Hispanic-owned business certification in IL — only confident ones. Link [Illinois DCEO](https://dceo.illinois.gov) or [SBA](https://www.sba.gov/business-guide/grow-your-business/minority-owned-businesses).
+4) 90-day milestone: what does first $500/month revenue look like? Price, volume, channel.
+
+Links: [Eventbrite](https://www.eventbrite.com), [Illinois DCEO](https://dceo.illinois.gov).
+
+TRANSLATION_START
+Plain-English of business validation, minority certification, revenue milestone, passive income structure. Under 80 words.
+TRANSLATION_END`},
+
+{group:null,icon:'🚀',title:'Business Opportunities',badge:'growth',key:'biz',
+ desc:'Hispanic entrepreneur programs in IL, emerging niches for bilingual PMs.',
+ prompt:`${CTX}${CITE}
+SECTION: Business Opportunities. Today: ${dateStr}.
+UNIQUE FOCUS: External grants, real programs, market niches. NOT children's events (separate).
+
+Deliver with citations after every claim:
+1) One real, established grant or program for Hispanic/minority women entrepreneurs in IL — only name ones you are confident exist (SBA 8(a), CDFI, Illinois SBDC, ALPFA). Describe eligibility and link it. Do not invent dollar amounts.
+2) One real emerging niche that fits bilingual PM skills — specific niche, why it's growing, how to enter.
+3) One real platform to list a productized PM service — with link and brief description.
+
+Links: [Illinois SBDC](https://www.ilsbdc.net), [SBA.gov](https://www.sba.gov), [ALPFA](https://www.alpfa.org).
+
+TRANSLATION_START
+Plain-English of SBA, CDFI, productized service, niche market, minority certification. Under 80 words.
+TRANSLATION_END`},
+
+{group:"WORLD INTELLIGENCE",icon:'🏛️',title:'True Politics',badge:'core',key:'politics',
+ desc:'Federal & IL policy updates and their direct financial impact on Crystal.',
+ prompt:`${CTX}${CITE}
+SECTION: True Politics. Today: ${dateStr}.
+UNIQUE FOCUS: Federal & Illinois political developments and direct financial impact on Crystal. NOT financial products, health tips, or business opportunities.
+
+Deliver with citations after every claim:
+1) One federal policy area with activity this week (taxes, Medicaid, housing, employment law) — describe the policy direction without inventing bill names. Link [AP News](https://apnews.com) or [Reuters](https://www.reuters.com).
+2) One Illinois political or budget development relevant to senior care or small business. Link [Illinois.gov](https://www.illinois.gov).
+3) Crystal's Impact callout: how each item specifically affects her finances, mom's care, or family situation.
+
+TRANSLATION_START
+Plain-English of any policy or political jargon — like explaining to a smart friend. Under 80 words.
+TRANSLATION_END`},
+
+{group:null,icon:'💰',title:'Financial Opportunities',badge:'core',key:'finance',
+ desc:'Savings rates, credit opportunities, and one actionable money move under $50.',
+ prompt:`${CTX}${CITE}
+SECTION: Financial Opportunities. Today: ${dateStr}.
+UNIQUE FOCUS: External financial market conditions — savings rates, credit, investment signals. NOT Crystal's personal debt payoff, net worth math, or real estate strategy.
+
+Deliver with citations after every claim:
+1) High-yield savings account rate environment right now — general range using directional language. Link [Bankrate](https://www.bankrate.com) to verify current rates.
+2) Whether 0% APR balance transfer cards are widely available — general market conditions. Link [NerdWallet](https://www.nerdwallet.com/best/credit-cards/balance-transfer).
+3) One beginner investment signal this week — directional language only. Link [MarketWatch](https://www.marketwatch.com).
+4) One actionable money move under $50 she can take today.
+
+TRANSLATION_START
+Plain-English of APR, balance transfer, index fund, yield, HYSA. Under 80 words.
+TRANSLATION_END`},
+
+{group:null,icon:'✈️',title:'Travel Deals',badge:'core',key:'travel',
+ desc:'Flight deal windows from Chicago, family destination ideas, points tips.',
+ prompt:`${CTX}${CITE}
+SECTION: Travel Deals. Today: ${dateStr}.
+UNIQUE FOCUS: Travel deals, family trips, points strategy only.
+
+Deliver with citations:
+1) Current travel deal timing windows from Chicago ORD/MDW — strategy and when to book. Link [Google Flights](https://www.google.com/flights) and [Going.com](https://www.going.com).
+2) One family-friendly, culturally rich destination suited for Crystal's household — why it fits, what to see.
+3) One concrete points/miles tip using everyday spending. Link [NerdWallet Travel](https://www.nerdwallet.com/travel) or [The Points Guy](https://thepointsguy.com).
+
+TRANSLATION_START
+Plain-English of airline miles, transfer partner, peak vs off-peak, credit card points. Under 70 words.
+TRANSLATION_END`},
+
+{group:"FINANCIAL COMMAND",icon:'💳',title:'Daily Debt & Credit Pulse',badge:'critical',key:'debt',
+ desc:'Avalanche method priority, one payoff micro-action, credit score movement.',
+ prompt:`${CTX}${CITE}
+SECTION: Daily Debt & Credit Pulse. Today: ${dateStr}.
+UNIQUE FOCUS: Debt payoff priority and credit score movement. NOT Earnin cycle (separate), NOT net worth math (separate).
+
+Crystal's known debts: Credit One, Capital One x2, Milestone, Indigo, Care Credit x2, Oportun $153.58/mo, Affirm x4, Klarna, ProgressiveLease $203.98/mo. Credit score 620.
+
+Deliver with citations:
+1) Which debt to attack first using the avalanche method (highest interest rate first) — explain the logic. Link [NerdWallet Debt Avalanche](https://www.nerdwallet.com/article/finance/debt-avalanche).
+2) One specific payoff micro-action to take this week — concrete steps.
+3) What credit score movement she can expect from one specific action — general credit science. Link [Experian](https://www.experian.com/blogs/ask-experian/credit-education/).
+4) 30-second mindset reframe. Target: 750+ score = real estate ready.
+
+Links: [AnnualCreditReport.com](https://www.annualcreditreport.com), [Credit Karma](https://www.creditkarma.com).
+
+TRANSLATION_START
+Plain-English of avalanche method, credit utilization, derogatory mark, hard inquiry, credit mix. Under 80 words.
+TRANSLATION_END`},
+
+{group:null,icon:'🔁',title:'Earnin Trap Tracker',badge:'critical',key:'earnin',
+ desc:'Countdown to April 28 income stabilization, steps to exit the advance cycle.',
+ prompt:`${CTX}${CITE}
+SECTION: Earnin Trap Tracker. Today: ${dateStr}.
+UNIQUE FOCUS: The advance/repayment cycle and April 28, 2026 income stabilization milestone.
+
+Today is ${dateStr}. April 28, 2026 is Crystal's income stabilization date.
+
+Deliver with citations:
+1) Calculate exactly how many days remain until April 28, 2026 from today.
+2) How the earned wage advance/repayment cycle mechanically traps cash flow — explain with a concrete example. Link [CFPB on Earned Wage Access](https://www.consumerfinance.gov).
+3) What Crystal should do with her FIRST full stabilized paycheck to break the cycle — specific allocation.
+4) One concrete step this week to reduce Earnin dependency.
+
+TRANSLATION_START
+Plain-English of earned wage advance, repayment cycle, income stabilization, cash flow trap. Under 70 words.
+TRANSLATION_END`},
+
+{group:null,icon:'📊',title:'Net Worth Scoreboard',badge:'core',key:'networth',
+ desc:'Current -$20K baseline, compound math to $1M, first milestone to celebrate.',
+ prompt:`${CTX}${CITE}
+SECTION: Net Worth Scoreboard. Today: ${dateStr}.
+UNIQUE FOCUS: Net worth trajectory and math to $1M. NOT specific debt accounts (separate), NOT investment account setup (separate).
+
+Deliver with citations:
+1) Baseline: -$20,000. Visualize the journey: zero = debt-free = real starting line; $1M = the goal.
+2) Monthly saving rate needed at different timelines (10yr / 15yr / 20yr) using 7% return assumption — show the actual compound interest math.
+3) Calculate: what does $500/month invested at 7% annual return grow to over 20 years?
+4) First milestone to celebrate and why it matters psychologically. Link [NerdWallet Calculator](https://www.nerdwallet.com/article/investing/compound-interest-calculator).
+
+TRANSLATION_START
+Plain-English of compound interest, net worth, rate of return, investment timeline, principal. Under 70 words.
+TRANSLATION_END`},
+
+{group:"CAREER & NETWORK",icon:'💼',title:'Career Capital Pulse',badge:'new',key:'career',
+ desc:'Chicago Senior PM salary benchmarks, temp-to-perm countdown, Director path.',
+ prompt:`${CTX}${CITE}
+SECTION: Career Capital Pulse. Today: ${dateStr}.
+UNIQUE FOCUS: Career trajectory, salary benchmarking, visibility. NOT business grants (separate), NOT networking events (separate).
+
+Crystal: $48/hr = ~$89,856/yr annualized. Temp-to-perm target ~October 2026.
+
+Deliver with citations after every claim:
+1) Senior PM salary range in Chicago/Illinois — use your training data benchmarks and flag to verify. Link [Glassdoor](https://www.glassdoor.com/Salaries/chicago-senior-project-manager-salary-SRCH_IL.0,7_IM167_KO8,30.htm) and [LinkedIn Salary](https://www.linkedin.com/salary/).
+2) Honest assessment: is $89,856 at/above/below market? State the comparison plainly.
+3) One visibility-building action she can take this week — specific.
+4) Calculate months remaining until October 2026 from ${dateStr}.
+5) One specific skill to build now for the Director-level path — why it matters.
+
+INSPIRATION RULE: Her PMP + CLSSC + bilingual + cross-sector experience IS a differentiated profile. State that factually.
+
+TRANSLATION_START
+Plain-English of market rate, salary benchmarking, temp-to-perm, visibility strategy, Director path. Under 80 words.
+TRANSLATION_END`},
+
+{group:null,icon:'🤝',title:'Network Capital Nudge',badge:'new',key:'network',
+ desc:'IL REIA communities, Hispanic networks, one 5-minute LinkedIn action.',
+ prompt:`${CTX}${CITE}
+SECTION: Network Capital Nudge. Today: ${dateStr}.
+UNIQUE FOCUS: Building Crystal's investor and entrepreneur network. NOT career/salary (separate).
+
+Deliver with citations:
+1) One real IL REIA or investor community — only ones you are confident exist. Link [Illinois REIA](https://www.ilreia.com) or [BiggerPockets](https://www.biggerpockets.com).
+2) One real Hispanic business network in IL — link [ALPFA](https://www.alpfa.org) or [Illinois Hispanic Chamber](https://www.ihcc.com).
+3) One LinkedIn action under 5 minutes — specific and concrete. What to post or comment about.
+4) One relationship micro-action this week — DM, comment, introduction, or coffee ask.
+
+TRANSLATION_START
+Plain-English of REIA, network capital, relationship ROI, investor community, warm vs cold outreach. Under 70 words.
+TRANSLATION_END`},
+
+{group:"WEALTH BUILDING",icon:'🏘️',title:'Real Estate Roadmap Signal',badge:'growth',key:'realestate',
+ desc:'DuPage County market, FHA readiness, one action toward 2027 purchase.',
+ prompt:`${CTX}${CITE}
+SECTION: Real Estate Roadmap Signal. Today: ${dateStr}.
+UNIQUE FOCUS: Real estate market conditions and Crystal's purchase readiness. NOT investment accounts (separate), NOT general credit (separate).
+
+Crystal: credit score 620 (needs 680–720+ for best FHA terms), zero down payment saved, debt payoff target Aug–Oct 2027, Carol Stream/DuPage County.
+
+Deliver with citations after every claim:
+1) Current 30-year fixed and FHA mortgage rate environment — directional language, not invented numbers. Link [Bankrate Mortgage](https://www.bankrate.com/mortgages/mortgage-rates/) to verify today's actual rates.
+2) Credit score milestone and realistic timeline needed to qualify.
+3) DuPage County median home price range (from training data — flag to verify) and 3.5% FHA down payment estimate. Link [Zillow DuPage](https://www.zillow.com/dupage-county-il/).
+4) One specific action this month toward readiness.
+
+Links: [HUD FHA Loans](https://www.hud.gov/buying/loans), [Bankrate](https://www.bankrate.com).
+
+TRANSLATION_START
+Plain-English of FHA loan, down payment, mortgage rate, equity, amortization, debt-to-income ratio. Under 80 words.
+TRANSLATION_END`},
+
+{group:null,icon:'🧾',title:'Tax Strategy Alert',badge:'growth',key:'tax',
+ desc:'Caregiver deductions, W-4 adjustment, Roth IRA action, estimated savings.',
+ prompt:`${CTX}${CITE}
+SECTION: Tax Strategy Alert. Today: ${dateStr}.
+UNIQUE FOCUS: Legal tax reduction for Crystal as W-2 earner and caregiver. NOT real estate depreciation, NOT business deductions.
+
+Deliver with citations after every claim:
+1) Top 3 available deductions/credits: Dependent Care FSA/credit, medical expense deduction for mom, Child Tax Credit for Lito. Describe real IRS rules for each. Link [IRS.gov](https://www.irs.gov) for each item.
+2) W-4 withholding: should she adjust? Clear yes/no with honest reasoning. Link [IRS W-4 Tool](https://www.irs.gov/individuals/tax-withholding-estimator).
+3) 2026 Roth IRA contribution limit — state the known limit and link [IRS Roth IRA](https://www.irs.gov/retirement-plans/roth-iras).
+4) Realistic estimated annual tax savings range — frame as a range with reasoning.
+
+TRANSLATION_START
+Plain-English of W-4 withholding, Roth IRA, tax credit vs deduction, dependent care FSA, adjusted gross income. Under 80 words.
+TRANSLATION_END`},
+
+{group:"MINDSET & PSYCHOLOGY",icon:'🔥',title:'Stress-Spend Correlation Flag',badge:'new',key:'stressspend',
+ desc:"Stress self-check, today's spending risk, a $5 meal idea, a spending boundary.",
+ prompt:`${CTX}${CITE}
+SECTION: Stress-Spend Correlation Flag. Today: ${dateStr}.
+UNIQUE FOCUS: The stress → food ordering behavioral pattern. NOT general mindset (separate), NOT debt strategy (separate).
+
+Crystal's pattern: stress → Uber Eats (~$500–600/mo) + restaurants (~$1,200/mo) = ~$2,200–2,400/month food spend.
+
+Deliver with citations:
+1) Three stress self-check questions she can answer right now.
+2) What high stress scores predict about today's ordering impulse — behavioral science. Cite [APA](https://www.apa.org) or behavioral finance research.
+3) One specific quick meal idea under $5 to have on hand instead of ordering — practical and appealing.
+4) One spending boundary for TODAY — specific dollar amount or category limit. Link [YNAB](https://www.youneedabudget.com).
+
+TRANSLATION_START
+Plain-English of stress-spend correlation, behavioral trigger, impulse control, spending boundary, emotional eating. Under 70 words.
+TRANSLATION_END`},
+
+{group:null,icon:'⏱️',title:'Time Wealth Check',badge:'core',key:'time',
+ desc:"Today's time allocation estimate, one task to delegate, one top priority.",
+ prompt:`${CTX}${CITE}
+SECTION: Time Wealth Check. Today: ${dateStr}.
+UNIQUE FOCUS: Time allocation, delegation, one most important action today. NOT career tasks (separate), NOT business steps (separate).
+
+Crystal: 37.5 hrs/week work, primary caregiver, household of 4, building financial freedom.
+
+Deliver:
+1) Honest estimate of today's time allocation across: work / caregiving / family / personal. Show as approximate percentages.
+2) One task she can eliminate, automate, or delegate today — specific.
+3) One 15-minute window for wealth-building activity — when and what to do.
+4) Her ONE most important action today ranked by impact toward freedom — specific, not generic.
+
+Keep under 150 words total. Link [Cal Newport Deep Work](https://www.calnewport.com) for time management context.
+
+TRANSLATION_START
+Plain-English of time ROI, delegation ladder, 80/20 rule, opportunity cost. Under 60 words.
+TRANSLATION_END`},
+
+{group:"WEALTH BUILDING",icon:'⚖️',title:'Legal & Legacy Shield',badge:'new',key:'legal',
+ desc:'Most urgent legal action, revocable trust cost in IL, LLC timing, estate update.',
+ prompt:`${CTX}${CITE}
+SECTION: Legal & Legacy Shield. Today: ${dateStr}.
+UNIQUE FOCUS: Legal protections needed now and as wealth grows. NOT Medicaid specifics (separate), NOT tax law (separate).
+
+Crystal: no LLC, no will, no trust, no confirmed beneficiaries, no healthcare proxy for mom.
+
+Deliver with citations after every claim:
+1) #1 most urgent legal action in the next 30 days — and exactly why for her situation. Link [Illinois Legal Aid](https://www.illinoislegalaid.org).
+2) Revocable living trust: general cost range in Illinois — from training data, flag to verify with a local attorney. Link [LegalZoom](https://www.legalzoom.com).
+3) LLC: does she need one now or at what revenue/asset milestone? Be honest about the threshold.
+4) One beneficiary or estate document to update THIS WEEK — which one and how. Link [IL Secretary of State](https://www.ilsos.gov).
+
+TRANSLATION_START
+Plain-English of revocable living trust, LLC, beneficiary designation, healthcare proxy, power of attorney. Under 80 words.
+TRANSLATION_END`},
+
+{group:"CLOSE THE LOOP",icon:'✨',title:"Today's Win & Gratitude Lock",badge:'core',key:'gratitude',
+ desc:"One real evidence of progress, three genuine gratitude anchors, Athena's closing word.",
+ prompt:`${CTX}${CITE}
+SECTION: Today's Win & Gratitude Lock. Today: ${dateStr}.
+UNIQUE FOCUS: Anchoring real wins and genuine gratitude. NOT mindset reframes (separate section), NOT action items.
+
+Crystal: high inner critic, tends to undervalue progress. She is managing caregiving + debt recovery + full-time work + parenting simultaneously.
+
+Deliver:
+1) One specific, real thing about Crystal's current situation that IS evidence of progress — grounded ONLY in verified facts listed above, not invented wins.
+2) Three genuine gratitude anchors specific to her actual verified life.
+3) One affirmation that is ACTUALLY TRUE based on verified facts — not toxic positivity. If it cannot be verified from her profile, do not say it.
+4) Athena's closing message — honest, warm, and specific. What a real trusted advisor who fully knows her situation would say.
+
+INSPIRATION RULE: She is still standing, paying bills, caring for her mother, raising her son. State that as fact. Do not promise millions.
+
+TRANSLATION_START
+In plain everyday language, summarize what today's full brief means for Crystal in 2–3 simple sentences — like a trusted friend giving her the real bottom line. Under 80 words.
+TRANSLATION_END`},
+];
+
+// ── SECTION INDEX ─────────────────────────────────────────────────────────
+function buildSectionIndex(){
+  const grid=document.getElementById('sectionIndex');
+  grid.innerHTML='';
+  SECTIONS.forEach((s,i)=>{
+    const chip=document.createElement('span');
+    chip.className='index-chip';
+    chip.innerHTML=`${s.icon} ${s.title}`;
+    chip.title=s.desc;
+    chip.onclick=()=>{
+      const card=document.getElementById('card-'+s.key);
+      if(card){card.scrollIntoView({behavior:'smooth',block:'start'});card.classList.add('open');}
+    };
+    grid.appendChild(chip);
+    if(i<SECTIONS.length-1){const sep=document.createElement('span');sep.className='index-sep';sep.textContent=' · ';grid.appendChild(sep);}
+  });
+}
+
+// ── RENDER SECTIONS ───────────────────────────────────────────────────────
+function renderSections(){
+  const wrap=document.getElementById('sectionsWrap');
+  wrap.innerHTML='';
+  let lastGroup=null;
+  SECTIONS.forEach(s=>{
+    if(s.group&&s.group!==lastGroup){
+      lastGroup=s.group;
+      const lbl=document.createElement('div');
+      lbl.className='group-label';
+      lbl.textContent='— '+s.group+' —';
+      wrap.appendChild(lbl);
+    }
+    const card=document.createElement('div');
+    card.className='section-card';
+    card.id='card-'+s.key;
+    card.innerHTML=`
+      <div class="s-head" onclick="toggleCard('${s.key}')">
+        <span class="s-icon">${s.icon}</span>
+        <div style="flex:1;min-width:0;">
+          <div class="s-title">${s.title}</div>
+          <div class="s-desc">${s.desc}</div>
+        </div>
+        <span class="s-ask" onclick="event.stopPropagation();askAbout('${s.key}','${s.title}')">💬 Ask</span>
+        <span class="s-badge badge-${s.badge}">${s.badge}</span>
+        <span class="s-chev">▼</span>
+      </div>
+      <div class="s-body" id="body-${s.key}">
+        <div class="s-loading" id="loading-${s.key}" style="display:none;">
+          <div class="dot-loader"><span></span><span></span><span></span></div>
+          <span>Athena analyzing...</span>
+        </div>
+        <div id="content-${s.key}"></div>
+      </div>`;
+    wrap.appendChild(card);
+  });
+}
+function toggleCard(key){document.getElementById('card-'+key).classList.toggle('open');}
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+let generatedContent={};
+let isGenerating=false;
+let fullAudioScript='';
+let sectionOffsets=[];
+let currentSpeed=1;
+let audioInterval=null;
+let charProgress=0;
+let progressStartTime=null;
+let progressCharAtStart=0;
+let isPlaying=false;
+const CHARS_PER_SEC=13;
+const synth=window.speechSynthesis;
+let selectedVoice=null;
+
+// ── VOICE SELECTION ───────────────────────────────────────────────────────
+function selectBestVoice(){
+  const voices=synth.getVoices();
+  const preferred=['Google US English','Samantha','Karen','Moira',
+    'Microsoft Aria Online (Natural)','Microsoft Jenny Online (Natural)',
+    'Microsoft Aria','Microsoft Jenny','Alex','Victoria','Allison'];
+  for(const name of preferred){
+    const v=voices.find(v=>v.name.includes(name));
+    if(v){selectedVoice=v;return;}
+  }
+  selectedVoice=voices.find(v=>v.lang.startsWith('en-US'))||voices.find(v=>v.lang.startsWith('en'))||null;
+}
+
+// ── API CALL — NO TOOLS (browser CORS blocks tool_use, causes silent failures) ──
+async function callAPI(prompt, maxTokens=1200){
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:maxTokens,
+      // NO tools parameter — browser CORS policy blocks tool_use responses
+      // causing sections to return empty and fail silently.
+      // News recency is handled via prompt instructions instead.
+      messages:[{role:'user',content:prompt}]
+    })
+  });
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data=await res.json();
+  const text=data.content?.filter(b=>b.type==='text')?.map(b=>b.text)?.join('\n')||'';
+  if(!text.trim()) throw new Error('Empty response');
+  return text;
+}
+
+// ── GENERATE — with retry logic ───────────────────────────────────────────
+async function generateBriefing(){
+  if(isGenerating) return;
+  isGenerating=true;
+  generatedContent={};
+  stopAudio();
+
+  const btn=document.getElementById('btnGenerate');
+  btn.disabled=true; btn.textContent='⚡ Generating...';
+  document.getElementById('progressWrap').classList.add('visible');
+  document.getElementById('toolbar').style.display='none';
+  document.getElementById('audioPanel').classList.remove('visible');
+  document.getElementById('statusRow').classList.add('visible');
+
+  SECTIONS.forEach((s,i)=>{
+    setTimeout(()=>document.getElementById('card-'+s.key)?.classList.add('revealed'),i*30);
+    document.getElementById('content-'+s.key).innerHTML='';
+  });
+
+  let done=0;
+  const total=SECTIONS.length;
+  const tick=()=>{done++;document.getElementById('progressFill').style.width=Math.round(done/total*100)+'%';document.getElementById('progressLabel').textContent=`Loading ${done} of ${total} sections...`;};
+
+  // Batch of 2 with delay — reliable and avoids rate limits
+  for(let i=0;i<SECTIONS.length;i+=2){
+    await Promise.all(SECTIONS.slice(i,i+2).map(async s=>{await generateSection(s);tick();}));
+    if(i+2<SECTIONS.length) await new Promise(r=>setTimeout(r,400));
+  }
+
+  document.getElementById('progressLabel').textContent='✦ Briefing complete — Good morning, Crystal';
+  btn.textContent="⚡ Generate Today's Briefing";
+  btn.disabled=false; isGenerating=false;
+  document.getElementById('toolbar').style.display='flex';
+  updateStatusDots(); buildAudioScript(); saveVersion();
+}
+
+async function generateSection(s,retryCount=0){
+  document.getElementById('card-'+s.key)?.classList.add('open');
+  document.getElementById('loading-'+s.key).style.display='flex';
+  try{
+    const raw=await callAPI(s.prompt);
+    generatedContent[s.key]=raw;
+    document.getElementById('loading-'+s.key).style.display='none';
+    document.getElementById('content-'+s.key).innerHTML=formatContent(raw);
+  }catch(e){
+    if(retryCount<3){
+      const wait=(retryCount+1)*3000;
+      const lbl=document.getElementById('loading-'+s.key).querySelector('span:last-child');
+      if(lbl) lbl.textContent=`Retrying in ${wait/1000}s... (attempt ${retryCount+2}/4)`;
+      await new Promise(r=>setTimeout(r,wait));
+      return generateSection(s,retryCount+1);
+    }
+    document.getElementById('loading-'+s.key).style.display='none';
+    document.getElementById('content-'+s.key).innerHTML=`<div class="err-content">⚠ Failed after 4 attempts. Error: ${e.message||'Connection issue'}.<br>Tap 🔄 Regenerate to retry the full brief.</div>`;
+    generatedContent[s.key]='';
+  }
+}
+
+// ── FORMAT ────────────────────────────────────────────────────────────────
+function formatContent(raw){
+  const parts=raw.split(/TRANSLATION_START|TRANSLATION_END/);
+  const main=parts[0]||'';
+  const trans=(parts[1]||'').trim();
+  let html='<div class="brief-content">'+renderLines(main)+'</div>';
+  if(trans){
+    const cleanTrans=trans
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
+      .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+    html+=`<div class="translation-box"><div class="trans-label">🔍 Athena's Translation — Plain English</div><div class="trans-text">${cleanTrans}</div></div>`;
+  }
+  return html;
+}
+
+function renderLines(text){
+  text=text.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+  let out='';
+  text.split('\n').forEach(line=>{
+    line=line.trim(); if(!line) return;
+    let f=line.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+    if(line.startsWith('- ')||line.startsWith('• ')) out+=`<ul><li>${f.replace(/^[-•]\s+/,'')}</li></ul>`;
+    else if(/^\d+\.\s/.test(line)) out+=`<ul><li>${f.replace(/^\d+\.\s/,'')}</li></ul>`;
+    else if(line.toLowerCase().match(/crystal'?s impact|crystal'?s move|bottom line|athena says/)) out+=`<div class="hl-box">${f}</div>`;
+    else if(line.toLowerCase().match(/^alert:|^urgent:|^warning:/)) out+=`<div class="al-box">${f}</div>`;
+    else if(line.toLowerCase().match(/^action:|^next step:|^today'?s action:/)) out+=`<div class="ac-box">${f}</div>`;
+    else out+=`<p>${f}</p>`;
+  });
+  return out;
+}
+
+// ── VERSION HISTORY ───────────────────────────────────────────────────────
+const STORAGE_KEY='athena_briefings_v6';
+function saveVersion(){
+  const existing=loadAllVersions();
+  existing.unshift({id:Date.now(),date:dateStr,time:timeStr,fullDate:new Date().toISOString(),content:{...generatedContent},archived:false});
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(existing));}
+  catch(e){existing.pop();try{localStorage.setItem(STORAGE_KEY,JSON.stringify(existing));}catch(e2){}}
+  renderHistoryPanel();
+}
+function loadAllVersions(){try{const r=localStorage.getItem(STORAGE_KEY);return r?JSON.parse(r):[];}catch(e){return[];}}
+function saveAllVersions(v){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(v));}catch(e){}}
+function renderHistoryPanel(){
+  const versions=loadAllVersions();
+  document.getElementById('hpCount').textContent=`${versions.length} briefing${versions.length!==1?'s':''} saved`;
+  const body=document.getElementById('hpBody');
+  if(!versions.length){body.innerHTML='<div class="hp-empty">No briefings yet.<br><br>Generate your first and it will appear here.</div>';return;}
+  body.innerHTML='';
+  versions.forEach((v,idx)=>{
+    const card=document.createElement('div');
+    card.className='hp-card'+(idx===0?' active-version':'')+(v.archived?' hp-archived':'');
+    card.innerHTML=`
+      <div class="hp-card-head" onclick="loadVersion(${v.id})">
+        <div class="hp-version-label">Briefing #${versions.length-idx}${v.archived?'<span class="hp-archive-badge">Archived</span>':''}</div>
+        <div class="hp-date">${v.date}</div>
+        <div class="hp-time">Generated at ${v.time}</div>
+      </div>
+      <div class="hp-actions">
+        <button class="hp-btn load" onclick="loadVersion(${v.id})">📂 Load</button>
+        <button class="hp-btn arch" onclick="toggleArchive(${v.id})">${v.archived?'📤 Unarchive':'📦 Archive'}</button>
+        <button class="hp-btn del" onclick="deleteVersion(${v.id})">🗑 Delete</button>
+      </div>`;
+    body.appendChild(card);
+  });
+}
+function loadVersion(id){
+  const v=loadAllVersions().find(x=>x.id===id);
+  if(!v) return;
+  generatedContent={...v.content};
+  SECTIONS.forEach(s=>{
+    const el=document.getElementById('content-'+s.key);
+    if(el&&v.content[s.key]){el.innerHTML=formatContent(v.content[s.key]);document.getElementById('card-'+s.key)?.classList.add('open','revealed');}
+  });
+  document.getElementById('toolbar').style.display='flex';
+  document.getElementById('statusRow').classList.add('visible');
+  updateStatusDots(); buildAudioScript(); renderHistoryPanel();
+  document.querySelector('.main-col').scrollTo({top:0,behavior:'smooth'});
+}
+function toggleArchive(id){const vs=loadAllVersions();const v=vs.find(x=>x.id===id);if(v){v.archived=!v.archived;saveAllVersions(vs);renderHistoryPanel();}}
+function deleteVersion(id){if(!confirm('Delete this briefing version? This cannot be undone.')) return;saveAllVersions(loadAllVersions().filter(x=>x.id!==id));renderHistoryPanel();}
+
+// ── CHAT ──────────────────────────────────────────────────────────────────
+let chatHistory=[];
+let selectedSectionKey=null;
+let isChatting=false;
+
+function buildChatContextChips(){
+  const bar=document.getElementById('chatContextBar');
+  bar.innerHTML='';
+  SECTIONS.forEach(s=>{
+    const chip=document.createElement('span');
+    chip.className='chat-ctx-chip';
+    chip.id='ctx-'+s.key;
+    chip.textContent=s.icon+' '+s.title.split(' ').slice(0,2).join(' ');
+    chip.onclick=()=>selectChatContext(s.key,s.title,chip);
+    bar.appendChild(chip);
+  });
+}
+
+function selectChatContext(key,title,el){
+  document.querySelectorAll('.chat-ctx-chip').forEach(c=>c.classList.remove('selected'));
+  if(selectedSectionKey===key){selectedSectionKey=null;}
+  else{selectedSectionKey=key;el.classList.add('selected');document.getElementById('chatInput').placeholder=`Ask about ${title}...`;}
+}
+
+function askAbout(key,title){
+  // Called from the "Ask" button on each section card
+  selectedSectionKey=key;
+  document.querySelectorAll('.chat-ctx-chip').forEach(c=>c.classList.remove('selected'));
+  const chip=document.getElementById('ctx-'+key);
+  if(chip) chip.classList.add('selected');
+  document.getElementById('chatInput').placeholder=`Ask about ${title}...`;
+  document.getElementById('chatInput').focus();
+  // Scroll chat panel into view on mobile
+  document.querySelector('.chat-panel')?.scrollIntoView({behavior:'smooth'});
+}
+
+function chatKeyDown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}
+
+async function sendChat(){
+  if(isChatting) return;
+  const input=document.getElementById('chatInput');
+  const question=input.value.trim();
+  if(!question) return;
+
+  isChatting=true;
+  input.value='';
+  document.getElementById('chatSend').disabled=true;
+
+  // Remove empty state
+  const msgs=document.getElementById('chatMessages');
+  const empty=msgs.querySelector('.chat-empty');
+  if(empty) empty.remove();
+
+  // Add user message
+  addChatMsg('user','You',question);
+
+  // Build context from generated content
+  let context='';
+  if(selectedSectionKey&&generatedContent[selectedSectionKey]){
+    const s=SECTIONS.find(x=>x.key===selectedSectionKey);
+    context=`\nSECTION CONTEXT — "${s?.title}":\n${generatedContent[selectedSectionKey].split('TRANSLATION_START')[0].substring(0,1500)}`;
+  } else if(Object.keys(generatedContent).length>0){
+    // Summarize all generated content for general questions
+    context='\nTODAY\'S BRIEFING SUMMARY:\n'+SECTIONS.map(s=>{
+      const raw=generatedContent[s.key]||'';
+      if(!raw) return '';
+      return `${s.title}: ${raw.split('TRANSLATION_START')[0].substring(0,200)}...`;
+    }).filter(Boolean).join('\n').substring(0,2000);
+  }
+
+  // Show typing indicator
+  const typingEl=document.createElement('div');
+  typingEl.className='chat-msg athena';
+  typingEl.innerHTML='<div class="chat-msg-label">Athena</div><div class="chat-typing"><span></span><span></span><span></span></div>';
+  msgs.appendChild(typingEl);
+  msgs.scrollTop=msgs.scrollHeight;
+
+  const systemPrompt=`You are Athena, Crystal Rojas's personal intelligence AI. You are answering a follow-up question about her daily briefing.
+
+CRYSTAL'S CONTEXT:
+${CTX}
+${context}
+
+PREVIOUS CHAT:
+${chatHistory.slice(-6).map(m=>`${m.role==='user'?'Crystal':'Athena'}: ${m.content}`).join('\n')}
+
+INSTRUCTIONS:
+- Answer Crystal's question directly and helpfully based on the briefing content and her verified context
+- Be conversational, warm, and specific — not generic
+- If citing facts, mention the source (e.g., "according to the IRS..." or "Bankrate shows...")
+- If the question is outside your briefing context, answer from your general knowledge but flag it
+- Keep responses concise — under 150 words unless a longer answer is genuinely needed
+- Do not hallucinate specific numbers or URLs you're not certain about`;
+
+  try{
+    chatHistory.push({role:'user',content:question});
+    const reply=await callAPI(`${systemPrompt}\n\nCrystal's question: ${question}`,600);
+    chatHistory.push({role:'assistant',content:reply});
+    typingEl.remove();
+    addChatMsg('athena','Athena',reply);
+  }catch(e){
+    typingEl.remove();
+    addChatMsg('athena','Athena','I had trouble connecting. Please try again in a moment.');
+  }
+
+  isChatting=false;
+  document.getElementById('chatSend').disabled=false;
+}
+
+function addChatMsg(type,label,text){
+  const msgs=document.getElementById('chatMessages');
+  const el=document.createElement('div');
+  el.className='chat-msg '+type;
+  // Format links in chat responses
+  const formatted=text
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\n/g,'<br>');
+  el.innerHTML=`<div class="chat-msg-label">${label}</div>${formatted}`;
+  msgs.appendChild(el);
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+function clearChat(){
+  chatHistory=[];
+  const msgs=document.getElementById('chatMessages');
+  msgs.innerHTML='<div class="chat-empty">Ask Athena anything about today\'s briefing.<br><br>Tap a section chip below to focus on a topic, or just type your question.</div>';
+  selectedSectionKey=null;
+  document.querySelectorAll('.chat-ctx-chip').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('chatInput').placeholder='Ask about any section...';
+}
+
+// ── AUDIO ─────────────────────────────────────────────────────────────────
+function buildAudioScript(){
+  fullAudioScript=`Athena Daily Briefing for Crystal Rojas. ${dateStr}. Carol Stream, Illinois.\n\n`;
+  sectionOffsets=[];
+  SECTIONS.forEach(s=>{
+    const raw=generatedContent[s.key]||'';
+    const mainOnly=raw.split('TRANSLATION_START')[0];
+    const clean=mainOnly.replace(/\[([^\]]+)\]\([^\)]+\)/g,'$1').replace(/\*\*/g,'').replace(/#{1,3}\s/g,'');
+    sectionOffsets.push({key:s.key,title:s.title,charStart:fullAudioScript.length});
+    fullAudioScript+=`Section: ${s.title}.\n${clean}\n\n`;
+  });
+  SECTIONS.forEach(s=>{
+    const parts=(generatedContent[s.key]||'').split(/TRANSLATION_START|TRANSLATION_END/);
+    if(parts[1]?.trim()) fullAudioScript+=`Athena's Translation for ${s.title}: ${parts[1].trim().replace(/\*\*/g,'')}\n\n`;
+  });
+  buildAudioNav();
+}
+function buildAudioNav(){
+  const nav=document.getElementById('audioNav'); nav.innerHTML='';
+  SECTIONS.forEach(s=>{
+    const b=document.createElement('button');
+    b.className='btn-jump'; b.id='jump-'+s.key;
+    b.textContent=s.icon+' '+s.title.split(' ').slice(0,2).join(' ');
+    b.onclick=()=>jumpTo(s.key); nav.appendChild(b);
+  });
+}
+function toggleAudio(){
+  const p=document.getElementById('audioPanel'),b=document.getElementById('btnAudio');
+  if(p.classList.contains('visible')){p.classList.remove('visible');b.classList.remove('active');stopAudio();}
+  else{p.classList.add('visible');b.classList.add('active');if(!fullAudioScript) buildAudioScript();selectBestVoice();}
+}
+function togglePlay(){isPlaying?pauseAudio():resumeOrStart();}
+function resumeOrStart(){
+  // With chunked audio, resume = restart from current position
+  startFrom(charProgress);
+}
+// ── CHUNKED AUDIO — fixes browser bug where long text silently stops ──────
+// Splits full script into sentence-level chunks and queues them sequentially.
+// This is the only reliable cross-browser approach for long-form TTS.
+let audioChunks=[];
+let currentChunkIndex=0;
+
+function splitIntoChunks(text,maxLen=200){
+  // Split on sentence boundaries, keeping chunks under maxLen chars
+  const sentences=text.match(/[^.!?
+]+[.!?
+]*/g)||[text];
+  const chunks=[];
+  let current='';
+  for(const s of sentences){
+    if((current+s).length>maxLen&&current){
+      chunks.push(current.trim());
+      current=s;
+    } else {
+      current+=s;
+    }
+  }
+  if(current.trim()) chunks.push(current.trim());
+  return chunks.filter(c=>c.trim().length>2);
+}
+
+function startFrom(pos){
+  stopAudio();
+  const text=fullAudioScript.slice(pos);
+  if(!text.trim()) return;
+  if(!selectedVoice) selectBestVoice();
+
+  audioChunks=splitIntoChunks(text);
+  currentChunkIndex=0;
+  isPlaying=true;
+  document.getElementById('btnPlay').textContent='⏸';
+  startTracker();
+  highlightSec();
+  playNextChunk();
+}
+
+function playNextChunk(){
+  if(!isPlaying||currentChunkIndex>=audioChunks.length){
+    if(currentChunkIndex>=audioChunks.length){
+      isPlaying=false;
+      document.getElementById('btnPlay').textContent='▶';
+      stopTracker();
+      document.getElementById('audioFill').style.width='100%';
+      clearJ();
+    }
+    return;
+  }
+  const chunk=audioChunks[currentChunkIndex];
+  const u=new SpeechSynthesisUtterance(chunk);
+  u.rate=currentSpeed; u.pitch=1.0; u.volume=1; u.lang='en-US';
+  if(selectedVoice) u.voice=selectedVoice;
+  u.onend=()=>{
+    if(!isPlaying) return;
+    currentChunkIndex++;
+    // Update char progress estimate for progress bar
+    const charsSpoken=audioChunks.slice(0,currentChunkIndex).join('').length;
+    charProgress=Math.min(charProgress+charsSpoken,fullAudioScript.length);
+    highlightSec();
+    playNextChunk();
+  };
+  u.onerror=(e)=>{
+    // Skip errored chunk and continue
+    if(e.error==='interrupted') return;
+    currentChunkIndex++;
+    playNextChunk();
+  };
+  synth.speak(u);
+  // Chrome bug: TTS stops after ~15s without this keepalive
+  setTimeout(()=>{if(isPlaying&&synth.speaking) synth.resume();},10000);
+}
+
+function pauseAudio(){
+  synth.cancel();
+  isPlaying=false;
+  document.getElementById('btnPlay').textContent='▶';
+  stopTracker();
+}
+function stopAudio(){
+  synth.cancel();
+  isPlaying=false;
+  audioChunks=[];
+  currentChunkIndex=0;
+  document.getElementById('btnPlay').textContent='▶';
+  stopTracker();
+  document.getElementById('audioFill').style.width='0%';
+  document.getElementById('audioTime').textContent='0:00 / 0:00';
+  clearJ();
+}
+function clearJ(){document.querySelectorAll('.btn-jump').forEach(b=>b.classList.remove('playing'));document.querySelectorAll('.section-card').forEach(c=>c.classList.remove('playing-now'));}
+function jumpTo(key){const o=sectionOffsets.find(s=>s.key===key);if(o){charProgress=o.charStart;startFrom(charProgress);}}
+function startTracker(){
+  progressStartTime=Date.now(); progressCharAtStart=charProgress; stopTracker();
+  audioInterval=setInterval(()=>{
+    const el=(Date.now()-progressStartTime)/1000;
+    charProgress=Math.min(progressCharAtStart+el*CHARS_PER_SEC*currentSpeed,fullAudioScript.length);
+    const pct=charProgress/fullAudioScript.length*100;
+    document.getElementById('audioFill').style.width=pct+'%';
+    const tot=Math.round(fullAudioScript.length/(CHARS_PER_SEC*currentSpeed));
+    const cur=Math.round(charProgress/(CHARS_PER_SEC*currentSpeed));
+    document.getElementById('audioTime').textContent=fmtT(cur)+' / '+fmtT(tot);
+    highlightSec();
+  },300);
+}
+function stopTracker(){if(audioInterval){clearInterval(audioInterval);audioInterval=null;}}
+function fmtT(s){return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
+function highlightSec(){
+  let cur=sectionOffsets[0]?.key;
+  for(const s of sectionOffsets){if(charProgress>=s.charStart)cur=s.key;else break;}
+  clearJ();
+  document.getElementById('jump-'+cur)?.classList.add('playing');
+  document.getElementById('card-'+cur)?.classList.add('playing-now');
+}
+function seekAudio(e){
+  const t=document.getElementById('audioTrack'),r=t.getBoundingClientRect();
+  const pct=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));
+  charProgress=Math.floor(pct*fullAudioScript.length);
+  if(isPlaying) startFrom(charProgress); else document.getElementById('audioFill').style.width=(pct*100)+'%';
+}
+function setSpeed(s){
+  currentSpeed=s;
+  document.querySelectorAll('.btn-speed').forEach(b=>b.classList.toggle('active',parseFloat(b.textContent)===s));
+  if(isPlaying){pauseAudio();resumeOrStart();}
+}
+
+// ── PDF — Blob download (Netlify safe) ────────────────────────────────────
+function downloadPDF(){
+  if(!Object.keys(generatedContent).length){alert('Please generate your briefing first.');return;}
+  SECTIONS.forEach(s=>document.getElementById('card-'+s.key)?.classList.add('open'));
+  let sectionsHTML='';
+  SECTIONS.forEach(s=>{
+    const raw=generatedContent[s.key]||''; if(!raw) return;
+    const parts=raw.split(/TRANSLATION_START|TRANSLATION_END/);
+    const mainFmt=(parts[0]||'')
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g,'<a href="$2">$1</a>')
+      .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+    let body='';
+    mainFmt.split('\n').forEach(line=>{
+      line=line.trim(); if(!line) return;
+      if(line.startsWith('- ')||line.startsWith('• ')) body+=`<li>${line.replace(/^[-•]\s+/,'')}</li>`;
+      else if(/^\d+\.\s/.test(line)) body+=`<li>${line.replace(/^\d+\.\s/,'')}</li>`;
+      else body+=`<p>${line}</p>`;
+    });
+    body=body.replace(/(<li>[\s\S]*?<\/li>)+/g,m=>`<ul>${m}</ul>`);
+    const trans=(parts[1]||'').trim();
+    const transFmt=trans?`<div class="tr"><div class="trl">🔍 Athena's Translation</div><div class="trb">${trans.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div></div>`:'';
+    sectionsHTML+=`<div class="sec"><div class="sh">${s.icon} ${s.title}</div><div class="sc">${body}${transFmt}</div></div>`;
+  });
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Athena Brief — ${dateStr}</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Georgia,serif;font-size:11px;color:#1a1814;background:white;line-height:1.6}
+.cover{text-align:center;padding:32px 36px 20px;border-bottom:3px double #c49a3c;margin-bottom:20px}
+.eye{font-family:monospace;font-size:8px;letter-spacing:.2em;color:#9a6f28;text-transform:uppercase;margin-bottom:5px}
+.ct{font-size:24px;font-weight:bold;color:#9a6f28;margin-bottom:3px}.cs{font-size:11px;color:#666;font-style:italic;margin-bottom:2px}
+.cd{font-family:monospace;font-size:8px;color:#999;letter-spacing:.08em}
+.sec{break-inside:avoid;margin:0 32px 18px;padding-bottom:16px;border-bottom:1px solid #e0d8cc}
+.sec:last-child{border-bottom:none}
+.sh{font-size:11px;font-weight:bold;color:#9a6f28;letter-spacing:.05em;text-transform:uppercase;margin-bottom:7px;padding:6px 9px;background:#fdf8ec;border-left:3px solid #c49a3c}
+.sc p{margin-bottom:6px}.sc strong{color:#6a4f10}.sc a{color:#1a7a74;font-size:10px}
+.sc ul{margin:5px 0 5px 14px}.sc li{margin-bottom:2px}
+.tr{margin-top:8px;background:#f0f7f6;border-left:3px solid #1a7a74;padding:8px 10px;border-radius:0 3px 3px 0}
+.trl{font-family:monospace;font-size:7px;letter-spacing:.12em;color:#1a7a74;text-transform:uppercase;margin-bottom:4px}
+.trb{font-style:italic;color:#3a5550;font-size:10px}
+.ft{text-align:center;padding:14px 32px;font-family:monospace;font-size:8px;color:#aaa;letter-spacing:.08em;border-top:1px solid #e0d8cc;margin-top:14px}
+@media print{@page{margin:.65in;size:letter}body{font-size:10px}}</style></head><body>
+<div class="cover"><div class="eye">Powered by Athena Intelligence</div><div class="ct">ATHENA DAILY BRIEF</div>
+<div class="cs">Personal Command Center — Crystal Rojas</div><div class="cd">${dateStr} · Carol Stream, Illinois · Confidential</div></div>
+${sectionsHTML}<div class="ft">ATHENA v6.0 — 26 SECTIONS — CRYSTAL ROJAS INTELLIGENCE SYSTEM</div></body></html>`;
+
+  try{
+    const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=`Athena-Brief-${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}.html`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),3000);
+  }catch(e){
+    const w=window.open('','_blank');
+    if(w){w.document.write(html);w.document.close();setTimeout(()=>w.print(),800);}
+    else alert('Pop-ups blocked. Please allow pop-ups and try again.');
+  }
+}
+
+// ── STATUS DOTS ───────────────────────────────────────────────────────────
+function updateStatusDots(){
+  document.getElementById('dotCareer').className='status-dot warn';
+  document.getElementById('dotDebt').className='status-dot alert';
+  document.getElementById('dotHealth').className='status-dot active';
+  document.getElementById('dotMom').className='status-dot warn';
+  document.getElementById('dotInvest').className='status-dot alert';
+  document.getElementById('dotMindset').className='status-dot active';
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+buildSectionIndex();
+renderSections();
+renderHistoryPanel();
+buildChatContextChips();
+if(synth.onvoiceschanged!==undefined) synth.onvoiceschanged=()=>{synth.getVoices();selectBestVoice();};
+setTimeout(()=>{synth.getVoices();selectBestVoice();},500);
+</script>
+</body>
+</html>
