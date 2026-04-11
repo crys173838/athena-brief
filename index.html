@@ -1451,8 +1451,8 @@
 <p class="p1"><span class="Apple-converted-space">    </span>const transFmt=trans?`&lt;div class="tr"&gt;&lt;div class="trl"&gt;🔍 Athena's Translation&lt;/div&gt;&lt;div class="trb"&gt;${trans.replace(/\*\*(.*?)\*\*/g,'&lt;strong&gt;$1&lt;/strong&gt;')}&lt;/div&gt;&lt;/div&gt;`:'';</p>
 <p class="p1"><span class="Apple-converted-space">    </span>sectionsHTML+=`&lt;div class="sec"&gt;&lt;div class="sh"&gt;${s.icon} ${s.title}&lt;/div&gt;&lt;div class="sc"&gt;${body}${transFmt}&lt;/div&gt;&lt;/div&gt;`;</p>
 <p class="p1"><span class="Apple-converted-space">  </span>});</p>
-<p class="p1"><span class="Apple-converted-space">  </span>const html=`&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;head&gt;&lt;meta charset="UTF-8"&gt;&lt;title&gt;Athena Brief — ${dateStr}&lt;/title&gt;</p>
-<p class="p1">&lt;style&gt;*{margin:0;padding:0;box-sizing:border-box}body{font-family:Georgia,serif;font-size:11px;color:#1a1814;background:white;line-height:1.6}</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const html=`\x3C!DOCTYPE html&gt;\x3Chtml&gt;\x3Chead&gt;\x3Cmeta charset="UTF-8"&gt;\x3Ctitle&gt;Athena Brief — ${dateStr}\x3C/title&gt;</p>
+<p class="p1">\x3Cstyle&gt;*{margin:0;padding:0;box-sizing:border-box}body{font-family:Georgia,serif;font-size:11px;color:#1a1814;background:white;line-height:1.6}</p>
 <p class="p1">.cover{text-align:center;padding:32px 36px 20px;border-bottom:3px double #c49a3c;margin-bottom:20px}</p>
 <p class="p1">.eye{font-family:monospace;font-size:8px;letter-spacing:.2em;color:#9a6f28;text-transform:uppercase;margin-bottom:5px}</p>
 <p class="p1">.ct{font-size:24px;font-weight:bold;color:#9a6f28;margin-bottom:3px}.cs{font-size:11px;color:#666;font-style:italic;margin-bottom:2px}</p>
@@ -1466,10 +1466,10 @@
 <p class="p1">.trl{font-family:monospace;font-size:7px;letter-spacing:.12em;color:#1a7a74;text-transform:uppercase;margin-bottom:4px}</p>
 <p class="p1">.trb{font-style:italic;color:#3a5550;font-size:10px}</p>
 <p class="p1">.ft{text-align:center;padding:14px 32px;font-family:monospace;font-size:8px;color:#aaa;letter-spacing:.08em;border-top:1px solid #e0d8cc;margin-top:14px}</p>
-<p class="p1">@media print{@page{margin:.65in;size:letter}body{font-size:10px}}&lt;/style&gt;&lt;/head&gt;&lt;body&gt;</p>
+<p class="p1">@media print{@page{margin:.65in;size:letter}body{font-size:10px}}\x3C/style&gt;\x3C/head&gt;\x3Cbody&gt;</p>
 <p class="p1">&lt;div class="cover"&gt;&lt;div class="eye"&gt;Powered by Athena Intelligence&lt;/div&gt;&lt;div class="ct"&gt;ATHENA DAILY BRIEF&lt;/div&gt;</p>
 <p class="p1">&lt;div class="cs"&gt;Personal Command Center — Crystal Rojas&lt;/div&gt;&lt;div class="cd"&gt;${dateStr} · Carol Stream, Illinois · Confidential&lt;/div&gt;&lt;/div&gt;</p>
-<p class="p1">${sectionsHTML}&lt;div class="ft"&gt;ATHENA v6.0 — 26 SECTIONS — CRYSTAL ROJAS INTELLIGENCE SYSTEM&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;`;</p>
+<p class="p1">${sectionsHTML}&lt;div class="ft"&gt;ATHENA v6.0 — 26 SECTIONS — CRYSTAL ROJAS INTELLIGENCE SYSTEM&lt;/div&gt;\x3C/body&gt;\x3C/html&gt;`;</p>
 <p class="p2"><br></p>
 <p class="p1"><span class="Apple-converted-space">  </span>try{</p>
 <p class="p1"><span class="Apple-converted-space">    </span>const blob=new Blob([html],{type:'text/html;charset=utf-8'});</p>
