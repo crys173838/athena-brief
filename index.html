@@ -190,6 +190,8 @@
 <p class="p1">.trans-text{font-size:14px;line-height:1.7;color:var(--text-dim);font-style:italic}</p>
 <p class="p1">.trans-text strong{color:var(--teal);font-style:normal}</p>
 <p class="p1">.err-content{padding-top:12px;font-family:var(--font-m);font-size:11px;color:var(--rose)}</p>
+<p class="p1">.btn-retry-section{display:inline-flex;align-items:center;gap:6px;margin-top:10px;background:var(--rose-dim);border:1px solid rgba(184,64,85,.3);color:var(--rose);padding:8px 16px;font-family:var(--font-m);font-size:10px;letter-spacing:.08em;text-transform:uppercase;border-radius:3px;cursor:pointer;transition:all .2s}</p>
+<p class="p1">.btn-retry-section:hover{background:var(--rose);color:#fff}</p>
 <p class="p2"><br></p>
 <p class="p1">/* ── FOOTER ── */</p>
 <p class="p1">.footer{text-align:center;padding:16px 24px 28px;font-family:var(--font-m);font-size:9px;color:var(--text-muted);letter-spacing:.08em;border-top:1px solid var(--border);background:var(--surface)}</p>
@@ -900,14 +902,30 @@
 <p class="p1">// ── VOICE SELECTION ───────────────────────────────────────────────────────</p>
 <p class="p1">function selectBestVoice(){</p>
 <p class="p1"><span class="Apple-converted-space">  </span>const voices=synth.getVoices();</p>
-<p class="p1"><span class="Apple-converted-space">  </span>const preferred=['Google US English','Samantha','Karen','Moira',</p>
-<p class="p1"><span class="Apple-converted-space">    </span>'Microsoft Aria Online (Natural)','Microsoft Jenny Online (Natural)',</p>
-<p class="p1"><span class="Apple-converted-space">    </span>'Microsoft Aria','Microsoft Jenny','Alex','Victoria','Allison'];</p>
-<p class="p1"><span class="Apple-converted-space">  </span>for(const name of preferred){</p>
-<p class="p1"><span class="Apple-converted-space">    </span>const v=voices.find(v=&gt;v.name.includes(name));</p>
-<p class="p1"><span class="Apple-converted-space">    </span>if(v){selectedVoice=v;return;}</p>
+<p class="p1"><span class="Apple-converted-space">  </span>if(!voices||voices.length===0){</p>
+<p class="p1"><span class="Apple-converted-space">    </span>// Voices not loaded yet — will be called again via onvoiceschanged</p>
+<p class="p1"><span class="Apple-converted-space">    </span>return;</p>
 <p class="p1"><span class="Apple-converted-space">  </span>}</p>
-<p class="p1"><span class="Apple-converted-space">  </span>selectedVoice=voices.find(v=&gt;v.lang.startsWith('en-US'))||voices.find(v=&gt;v.lang.startsWith('en'))||null;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// Mac/Safari priority: Samantha, Ava, Victoria are the best Mac voices</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// Chrome on Mac: Google US English is best</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// Windows: Microsoft voices</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const preferred=[</p>
+<p class="p1"><span class="Apple-converted-space">    </span>'Samantha','Ava','Victoria','Karen','Moira',</p>
+<p class="p1"><span class="Apple-converted-space">    </span>'Google US English',</p>
+<p class="p1"><span class="Apple-converted-space">    </span>'Microsoft Aria Online (Natural)','Microsoft Jenny Online (Natural)',</p>
+<p class="p1"><span class="Apple-converted-space">    </span>'Microsoft Aria','Microsoft Jenny',</p>
+<p class="p1"><span class="Apple-converted-space">    </span>'Alex','Allison','Susan'</p>
+<p class="p1"><span class="Apple-converted-space">  </span>];</p>
+<p class="p1"><span class="Apple-converted-space">  </span>for(const name of preferred){</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const v=voices.find(v=&gt;v.name===name||v.name.includes(name));</p>
+<p class="p1"><span class="Apple-converted-space">    </span>if(v){selectedVoice=v;console.log('Athena voice:',v.name);return;}</p>
+<p class="p1"><span class="Apple-converted-space">  </span>}</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// Last resort: any English US voice, then any English voice</p>
+<p class="p1"><span class="Apple-converted-space">  </span>selectedVoice=voices.find(v=&gt;v.lang==='en-US'&amp;&amp;v.localService)||</p>
+<p class="p1"><span class="Apple-converted-space">                </span>voices.find(v=&gt;v.lang==='en-US')||</p>
+<p class="p1"><span class="Apple-converted-space">                </span>voices.find(v=&gt;v.lang.startsWith('en'))||</p>
+<p class="p1"><span class="Apple-converted-space">                </span>voices[0]||null;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>if(selectedVoice) console.log('Athena voice fallback:',selectedVoice.name);</p>
 <p class="p1">}</p>
 <p class="p2"><br></p>
 <p class="p1">// ── API CALL — NO TOOLS (browser CORS blocks tool_use, causes silent failures) ──</p>
@@ -986,9 +1004,20 @@
 <p class="p1"><span class="Apple-converted-space">      </span>return generateSection(s,retryCount+1);</p>
 <p class="p1"><span class="Apple-converted-space">    </span>}</p>
 <p class="p1"><span class="Apple-converted-space">    </span>document.getElementById('loading-'+s.key).style.display='none';</p>
-<p class="p1"><span class="Apple-converted-space">    </span>document.getElementById('content-'+s.key).innerHTML=`&lt;div class="err-content"&gt;⚠ Failed after 4 attempts. Error: ${e.message||'Connection issue'}.&lt;br&gt;Tap 🔄 Regenerate to retry the full brief.&lt;/div&gt;`;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>document.getElementById('content-'+s.key).innerHTML=`&lt;div class="err-content"&gt;⚠ This section failed to load. (${e.message||'Connection issue'})&lt;br&gt;&lt;br&gt;&lt;button class="btn-retry-section" onclick="retrySingleSection('${s.key}')"&gt;🔄 Retry This Section&lt;/button&gt;&lt;/div&gt;`;</p>
 <p class="p1"><span class="Apple-converted-space">    </span>generatedContent[s.key]='';</p>
 <p class="p1"><span class="Apple-converted-space">  </span>}</p>
+<p class="p1">}</p>
+<p class="p2"><br></p>
+<p class="p1">// ── RETRY SINGLE SECTION ─────────────────────────────────────────────────</p>
+<p class="p1">async function retrySingleSection(key){</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const s=SECTIONS.find(x=&gt;x.key===key);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>if(!s) return;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// Clear error, show loader</p>
+<p class="p1"><span class="Apple-converted-space">  </span>document.getElementById('content-'+key).innerHTML='';</p>
+<p class="p1"><span class="Apple-converted-space">  </span>await generateSection(s);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// Rebuild audio script to include newly loaded section</p>
+<p class="p1"><span class="Apple-converted-space">  </span>if(Object.keys(generatedContent).some(k=&gt;generatedContent[k])) buildAudioScript();</p>
 <p class="p1">}</p>
 <p class="p2"><br></p>
 <p class="p1">// ── FORMAT ────────────────────────────────────────────────────────────────</p>
@@ -1233,7 +1262,19 @@
 <p class="p1">function toggleAudio(){</p>
 <p class="p1"><span class="Apple-converted-space">  </span>const p=document.getElementById('audioPanel'),b=document.getElementById('btnAudio');</p>
 <p class="p1"><span class="Apple-converted-space">  </span>if(p.classList.contains('visible')){p.classList.remove('visible');b.classList.remove('active');stopAudio();}</p>
-<p class="p1"><span class="Apple-converted-space">  </span>else{p.classList.add('visible');b.classList.add('active');if(!fullAudioScript) buildAudioScript();selectBestVoice();}</p>
+<p class="p1"><span class="Apple-converted-space">  </span>else{</p>
+<p class="p1"><span class="Apple-converted-space">    </span>p.classList.add('visible');b.classList.add('active');</p>
+<p class="p1"><span class="Apple-converted-space">    </span>if(!fullAudioScript) buildAudioScript();</p>
+<p class="p1"><span class="Apple-converted-space">    </span>// Mac fix: force voice reload — voices may not be loaded on first call</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const voices=synth.getVoices();</p>
+<p class="p1"><span class="Apple-converted-space">    </span>if(voices&amp;&amp;voices.length&gt;0){ selectBestVoice(); }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>else{</p>
+<p class="p1"><span class="Apple-converted-space">      </span>// Voices not ready yet — wait for them</p>
+<p class="p1"><span class="Apple-converted-space">      </span>synth.onvoiceschanged=()=&gt;{ selectBestVoice(); };</p>
+<p class="p1"><span class="Apple-converted-space">      </span>// Also try after short delay as fallback</p>
+<p class="p1"><span class="Apple-converted-space">      </span>setTimeout(()=&gt;{ if(!selectedVoice){ synth.getVoices(); selectBestVoice(); } },300);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">  </span>}</p>
 <p class="p1">}</p>
 <p class="p1">function togglePlay(){isPlaying?pauseAudio():resumeOrStart();}</p>
 <p class="p1">function resumeOrStart(){</p>
@@ -1246,23 +1287,21 @@
 <p class="p1">let audioChunks=[];</p>
 <p class="p1">let currentChunkIndex=0;</p>
 <p class="p2"><br></p>
-<p class="p1">function splitIntoChunks(text,maxLen=200){</p>
-<p class="p1"><span class="Apple-converted-space">  </span>// Split on sentence boundaries, keeping chunks under maxLen chars</p>
-<p class="p1"><span class="Apple-converted-space">  </span>const sentences=text.match(/[^.!?</p>
-<p class="p1">]+[.!?</p>
-<p class="p1">]*/g)||[text];</p>
-<p class="p1"><span class="Apple-converted-space">  </span>const chunks=[];</p>
-<p class="p1"><span class="Apple-converted-space">  </span>let current='';</p>
-<p class="p1"><span class="Apple-converted-space">  </span>for(const s of sentences){</p>
+<p class="p1">function splitIntoChunks(text,maxLen=220){</p>
+<p class="p1"><span class="Apple-converted-space">  </span>var parts=text.replace(/([.!?])\s+/g,'$1|').split('|');</p>
+<p class="p1"><span class="Apple-converted-space">  </span>var chunks=[];</p>
+<p class="p1"><span class="Apple-converted-space">  </span>var current='';</p>
+<p class="p1"><span class="Apple-converted-space">  </span>for(var i=0;i&lt;parts.length;i++){</p>
+<p class="p1"><span class="Apple-converted-space">    </span>var s=parts[i];</p>
 <p class="p1"><span class="Apple-converted-space">    </span>if((current+s).length&gt;maxLen&amp;&amp;current){</p>
 <p class="p1"><span class="Apple-converted-space">      </span>chunks.push(current.trim());</p>
 <p class="p1"><span class="Apple-converted-space">      </span>current=s;</p>
 <p class="p1"><span class="Apple-converted-space">    </span>} else {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>current+=s;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>current+=(current?' ':'')+s;</p>
 <p class="p1"><span class="Apple-converted-space">    </span>}</p>
 <p class="p1"><span class="Apple-converted-space">  </span>}</p>
 <p class="p1"><span class="Apple-converted-space">  </span>if(current.trim()) chunks.push(current.trim());</p>
-<p class="p1"><span class="Apple-converted-space">  </span>return chunks.filter(c=&gt;c.trim().length&gt;2);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>return chunks.filter(function(c){return c.trim().length&gt;3;});</p>
 <p class="p1">}</p>
 <p class="p2"><br></p>
 <p class="p1">function startFrom(pos){</p>
@@ -1291,28 +1330,49 @@
 <p class="p1"><span class="Apple-converted-space">    </span>}</p>
 <p class="p1"><span class="Apple-converted-space">    </span>return;</p>
 <p class="p1"><span class="Apple-converted-space">  </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>// Mac/Safari fix: must re-select voice each chunk as it can get lost</p>
+<p class="p1"><span class="Apple-converted-space">  </span>if(!selectedVoice) selectBestVoice();</p>
+<p class="p2"><br></p>
 <p class="p1"><span class="Apple-converted-space">  </span>const chunk=audioChunks[currentChunkIndex];</p>
 <p class="p1"><span class="Apple-converted-space">  </span>const u=new SpeechSynthesisUtterance(chunk);</p>
-<p class="p1"><span class="Apple-converted-space">  </span>u.rate=currentSpeed; u.pitch=1.0; u.volume=1; u.lang='en-US';</p>
+<p class="p1"><span class="Apple-converted-space">  </span>u.rate=currentSpeed;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>u.pitch=1.0;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>u.volume=1.0;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>u.lang='en-US';</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>// Only set voice if we have one — on Mac, omitting voice uses system default which is fine</p>
 <p class="p1"><span class="Apple-converted-space">  </span>if(selectedVoice) u.voice=selectedVoice;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>u.onstart=()=&gt;{</p>
+<p class="p1"><span class="Apple-converted-space">    </span>// Confirm audio started — helps debug Mac issues</p>
+<p class="p1"><span class="Apple-converted-space">    </span>console.log('Speaking chunk',currentChunkIndex,'/',audioChunks.length);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>};</p>
+<p class="p2"><br></p>
 <p class="p1"><span class="Apple-converted-space">  </span>u.onend=()=&gt;{</p>
 <p class="p1"><span class="Apple-converted-space">    </span>if(!isPlaying) return;</p>
 <p class="p1"><span class="Apple-converted-space">    </span>currentChunkIndex++;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>// Update char progress estimate for progress bar</p>
 <p class="p1"><span class="Apple-converted-space">    </span>const charsSpoken=audioChunks.slice(0,currentChunkIndex).join('').length;</p>
 <p class="p1"><span class="Apple-converted-space">    </span>charProgress=Math.min(charProgress+charsSpoken,fullAudioScript.length);</p>
 <p class="p1"><span class="Apple-converted-space">    </span>highlightSec();</p>
-<p class="p1"><span class="Apple-converted-space">    </span>playNextChunk();</p>
+<p class="p1"><span class="Apple-converted-space">    </span>// Small delay between chunks — helps Mac/Safari not drop utterances</p>
+<p class="p1"><span class="Apple-converted-space">    </span>setTimeout(()=&gt;{ if(isPlaying) playNextChunk(); },80);</p>
 <p class="p1"><span class="Apple-converted-space">  </span>};</p>
+<p class="p2"><br></p>
 <p class="p1"><span class="Apple-converted-space">  </span>u.onerror=(e)=&gt;{</p>
-<p class="p1"><span class="Apple-converted-space">    </span>// Skip errored chunk and continue</p>
-<p class="p1"><span class="Apple-converted-space">    </span>if(e.error==='interrupted') return;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>console.warn('TTS error on chunk',currentChunkIndex,e.error);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>if(e.error==='interrupted'||e.error==='canceled') return;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>// Skip errored chunk and try next</p>
 <p class="p1"><span class="Apple-converted-space">    </span>currentChunkIndex++;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>playNextChunk();</p>
+<p class="p1"><span class="Apple-converted-space">    </span>setTimeout(()=&gt;{ if(isPlaying) playNextChunk(); },200);</p>
 <p class="p1"><span class="Apple-converted-space">  </span>};</p>
-<p class="p1"><span class="Apple-converted-space">  </span>synth.speak(u);</p>
-<p class="p1"><span class="Apple-converted-space">  </span>// Chrome bug: TTS stops after ~15s without this keepalive</p>
-<p class="p1"><span class="Apple-converted-space">  </span>setTimeout(()=&gt;{if(isPlaying&amp;&amp;synth.speaking) synth.resume();},10000);</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>// Mac Safari fix: cancel any pending speech before speaking new chunk</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// (Safari queues differently from Chrome)</p>
+<p class="p1"><span class="Apple-converted-space">  </span>try{ synth.speak(u); } catch(err){ console.warn('speak error',err); }</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>// Chrome/Mac keepalive: Chrome pauses TTS after ~15s in background tabs</p>
+<p class="p1"><span class="Apple-converted-space">  </span>setTimeout(()=&gt;{ if(isPlaying&amp;&amp;synth.speaking) synth.resume(); },10000);</p>
 <p class="p1">}</p>
 <p class="p2"><br></p>
 <p class="p1">function pauseAudio(){</p>
@@ -1441,8 +1501,17 @@
 <p class="p1">renderSections();</p>
 <p class="p1">renderHistoryPanel();</p>
 <p class="p1">buildChatContextChips();</p>
-<p class="p1">if(synth.onvoiceschanged!==undefined) synth.onvoiceschanged=()=&gt;{synth.getVoices();selectBestVoice();};</p>
-<p class="p1">setTimeout(()=&gt;{synth.getVoices();selectBestVoice();},500);</p>
+<p class="p1">// Mac/Safari: voices load asynchronously — must wait for onvoiceschanged</p>
+<p class="p1">if(synth.onvoiceschanged!==undefined){</p>
+<p class="p1"><span class="Apple-converted-space">  </span>synth.onvoiceschanged=()=&gt;{</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const v=synth.getVoices();</p>
+<p class="p1"><span class="Apple-converted-space">    </span>if(v&amp;&amp;v.length&gt;0) selectBestVoice();</p>
+<p class="p1"><span class="Apple-converted-space">  </span>};</p>
+<p class="p1">}</p>
+<p class="p1">// Also try immediately and after delays — covers Chrome, Firefox, and Mac Safari</p>
+<p class="p1">setTimeout(()=&gt;{ const v=synth.getVoices(); if(v&amp;&amp;v.length&gt;0) selectBestVoice(); },100);</p>
+<p class="p1">setTimeout(()=&gt;{ const v=synth.getVoices(); if(v&amp;&amp;v.length&gt;0&amp;&amp;!selectedVoice) selectBestVoice(); },1000);</p>
+<p class="p1">setTimeout(()=&gt;{ const v=synth.getVoices(); if(v&amp;&amp;v.length&gt;0&amp;&amp;!selectedVoice) selectBestVoice(); },3000);</p>
 <p class="p1">&lt;/script&gt;</p>
 <p class="p1">&lt;/body&gt;</p>
 <p class="p1">&lt;/html&gt;</p>
