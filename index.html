@@ -176,8 +176,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-b);font-size:
 .trans-text{font-size:14px;line-height:1.7;color:var(--text-dim);font-style:italic}
 .trans-text strong{color:var(--teal);font-style:normal}
 .err-content{padding-top:12px;font-family:var(--font-m);font-size:11px;color:var(--rose)}
-.btn-retry-section{display:inline-flex;align-items:center;gap:6px;margin-top:10px;background:var(--rose-dim);border:1px solid rgba(184,64,85,.3);color:var(--rose);padding:8px 16px;font-family:var(--font-m);font-size:10px;letter-spacing:.08em;text-transform:uppercase;border-radius:3px;cursor:pointer;transition:all .2s}
-.btn-retry-section:hover{background:var(--rose);color:#fff}
 
 /* ── FOOTER ── */
 .footer{text-align:center;padding:16px 24px 28px;font-family:var(--font-m);font-size:9px;color:var(--text-muted);letter-spacing:.08em;border-top:1px solid var(--border);background:var(--surface)}
@@ -888,73 +886,34 @@ let selectedVoice=null;
 // ── VOICE SELECTION ───────────────────────────────────────────────────────
 function selectBestVoice(){
   const voices=synth.getVoices();
-  if(!voices||voices.length===0){
-    // Voices not loaded yet — will be called again via onvoiceschanged
-    return;
-  }
-  // Mac/Safari priority: Samantha, Ava, Victoria are the best Mac voices
-  // Chrome on Mac: Google US English is best
-  // Windows: Microsoft voices
-  const preferred=[
-    'Samantha','Ava','Victoria','Karen','Moira',
-    'Google US English',
+  const preferred=['Google US English','Samantha','Karen','Moira',
     'Microsoft Aria Online (Natural)','Microsoft Jenny Online (Natural)',
-    'Microsoft Aria','Microsoft Jenny',
-    'Alex','Allison','Susan'
-  ];
+    'Microsoft Aria','Microsoft Jenny','Alex','Victoria','Allison'];
   for(const name of preferred){
-    const v=voices.find(v=>v.name===name||v.name.includes(name));
-    if(v){selectedVoice=v;console.log('Athena voice:',v.name);return;}
+    const v=voices.find(v=>v.name.includes(name));
+    if(v){selectedVoice=v;return;}
   }
-  // Last resort: any English US voice, then any English voice
-  selectedVoice=voices.find(v=>v.lang==='en-US'&&v.localService)||
-                voices.find(v=>v.lang==='en-US')||
-                voices.find(v=>v.lang.startsWith('en'))||
-                voices[0]||null;
-  if(selectedVoice) console.log('Athena voice fallback:',selectedVoice.name);
+  selectedVoice=voices.find(v=>v.lang.startsWith('en-US'))||voices.find(v=>v.lang.startsWith('en'))||null;
 }
 
 // ── API CALL — NO TOOLS (browser CORS blocks tool_use, causes silent failures) ──
 async function callAPI(prompt, maxTokens=1200){
-  // Read body ONCE as text — avoids "body already used" errors
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       model:'claude-sonnet-4-20250514',
       max_tokens:maxTokens,
+      // NO tools parameter — browser CORS policy blocks tool_use responses
+      // causing sections to return empty and fail silently.
+      // News recency is handled via prompt instructions instead.
       messages:[{role:'user',content:prompt}]
     })
   });
-
-  // Read body once as text
-  const bodyText=await res.text();
-
-  // Parse JSON defensively
-  let data;
-  try{ data=JSON.parse(bodyText); }
-  catch(e){ throw new Error('Bad JSON from server'); }
-
-  // Handle HTTP errors AFTER reading body
-  if(!res.ok){
-    const msg=data?.error?.message||data?.error?.type||('HTTP '+res.status);
-    if(res.status===429) throw new Error('Rate limit — retrying');
-    throw new Error(msg);
-  }
-
-  // Extract text — handle all content formats
-  let text='';
-  if(Array.isArray(data.content)){
-    text=data.content
-      .filter(b=>b&&b.type==='text'&&b.text)
-      .map(b=>b.text)
-      .join('\n')
-      .trim();
-  } else if(typeof data.content==='string'){
-    text=data.content.trim();
-  }
-
-  if(!text) throw new Error('Empty response (stop: '+(data.stop_reason||'?')+')');
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data=await res.json();
+  const text=data.content?.filter(b=>b.type==='text')?.map(b=>b.text)?.join('\n')||'';
+  if(!text.trim()) throw new Error('Empty response');
   return text;
 }
 
@@ -979,17 +938,15 @@ async function generateBriefing(){
 
   let done=0;
   const total=SECTIONS.length;
-  const tick=()=>{done++;document.getElementById('progressFill').style.width=Math.round(done/total*100)+'%';document.getElementById('progressLabel').textContent=`Loading section ${done} of ${total} — estimated ${Math.round((total-done)*3)} seconds remaining...`;};
+  const tick=()=>{done++;document.getElementById('progressFill').style.width=Math.round(done/total*100)+'%';document.getElementById('progressLabel').textContent=`Loading ${done} of ${total} sections...`;};
 
-  // Sequential with delay — one section at a time to avoid 30k token/min rate limit.
-  // 26 sections × ~3 seconds each = ~80 seconds total. Reliable and complete.
-  for(let i=0;i<SECTIONS.length;i++){
-    await generateSection(SECTIONS[i]);
-    tick();
-    if(i<SECTIONS.length-1) await new Promise(r=>setTimeout(r,3000));
+  // Batch of 2 with delay — reliable and avoids rate limits
+  for(let i=0;i<SECTIONS.length;i+=2){
+    await Promise.all(SECTIONS.slice(i,i+2).map(async s=>{await generateSection(s);tick();}));
+    if(i+2<SECTIONS.length) await new Promise(r=>setTimeout(r,400));
   }
 
-  document.getElementById('progressLabel').textContent='✦ All 26 sections complete — Good morning, Crystal! 🏛️';
+  document.getElementById('progressLabel').textContent='✦ Briefing complete — Good morning, Crystal';
   btn.textContent="⚡ Generate Today's Briefing";
   btn.disabled=false; isGenerating=false;
   document.getElementById('toolbar').style.display='flex';
@@ -1008,25 +965,14 @@ async function generateSection(s,retryCount=0){
     if(retryCount<3){
       const wait=(retryCount+1)*3000;
       const lbl=document.getElementById('loading-'+s.key).querySelector('span:last-child');
-      if(lbl) lbl.textContent=`Rate limit — waiting ${wait/1000}s before retry (attempt ${retryCount+2}/4)`;
+      if(lbl) lbl.textContent=`Retrying in ${wait/1000}s... (attempt ${retryCount+2}/4)`;
       await new Promise(r=>setTimeout(r,wait));
       return generateSection(s,retryCount+1);
     }
     document.getElementById('loading-'+s.key).style.display='none';
-    document.getElementById('content-'+s.key).innerHTML=`<div class="err-content">⚠ Failed to load after 4 attempts.<br><small style="opacity:.7">${e.message||'Connection issue'}</small><br><br><button class="btn-retry-section" onclick="retrySingleSection('${s.key}')">🔄 Retry This Section</button></div>`;
+    document.getElementById('content-'+s.key).innerHTML=`<div class="err-content">⚠ Failed after 4 attempts. Error: ${e.message||'Connection issue'}.<br>Tap 🔄 Regenerate to retry the full brief.</div>`;
     generatedContent[s.key]='';
   }
-}
-
-// ── RETRY SINGLE SECTION ─────────────────────────────────────────────────
-async function retrySingleSection(key){
-  const s=SECTIONS.find(x=>x.key===key);
-  if(!s) return;
-  // Clear error, show loader
-  document.getElementById('content-'+key).innerHTML='';
-  await generateSection(s);
-  // Rebuild audio script to include newly loaded section
-  if(Object.keys(generatedContent).some(k=>generatedContent[k])) buildAudioScript();
 }
 
 // ── FORMAT ────────────────────────────────────────────────────────────────
@@ -1271,136 +1217,27 @@ function buildAudioNav(){
 function toggleAudio(){
   const p=document.getElementById('audioPanel'),b=document.getElementById('btnAudio');
   if(p.classList.contains('visible')){p.classList.remove('visible');b.classList.remove('active');stopAudio();}
-  else{
-    p.classList.add('visible');b.classList.add('active');
-    if(!fullAudioScript) buildAudioScript();
-    // Mac fix: force voice reload — voices may not be loaded on first call
-    const voices=synth.getVoices();
-    if(voices&&voices.length>0){ selectBestVoice(); }
-    else{
-      // Voices not ready yet — wait for them
-      synth.onvoiceschanged=()=>{ selectBestVoice(); };
-      // Also try after short delay as fallback
-      setTimeout(()=>{ if(!selectedVoice){ synth.getVoices(); selectBestVoice(); } },300);
-    }
-  }
+  else{p.classList.add('visible');b.classList.add('active');if(!fullAudioScript) buildAudioScript();selectBestVoice();}
 }
 function togglePlay(){isPlaying?pauseAudio():resumeOrStart();}
 function resumeOrStart(){
-  // With chunked audio, resume = restart from current position
+  if(synth.paused){synth.resume();isPlaying=true;document.getElementById('btnPlay').textContent='⏸';startTracker();return;}
   startFrom(charProgress);
 }
-// ── CHUNKED AUDIO — fixes browser bug where long text silently stops ──────
-// Splits full script into sentence-level chunks and queues them sequentially.
-// This is the only reliable cross-browser approach for long-form TTS.
-let audioChunks=[];
-let currentChunkIndex=0;
-
-function splitIntoChunks(text,maxLen=220){
-  var parts=text.replace(/([.!?])\s+/g,'$1|').split('|');
-  var chunks=[];
-  var current='';
-  for(var i=0;i<parts.length;i++){
-    var s=parts[i];
-    if((current+s).length>maxLen&&current){
-      chunks.push(current.trim());
-      current=s;
-    } else {
-      current+=(current?' ':'')+s;
-    }
-  }
-  if(current.trim()) chunks.push(current.trim());
-  return chunks.filter(function(c){return c.trim().length>3;});
-}
-
 function startFrom(pos){
   stopAudio();
-  const text=fullAudioScript.slice(pos);
-  if(!text.trim()) return;
+  const text=fullAudioScript.slice(pos); if(!text.trim()) return;
+  const u=new SpeechSynthesisUtterance(text);
+  u.rate=currentSpeed; u.pitch=1.0; u.volume=1; u.lang='en-US';
   if(!selectedVoice) selectBestVoice();
-
-  audioChunks=splitIntoChunks(text);
-  currentChunkIndex=0;
-  isPlaying=true;
-  document.getElementById('btnPlay').textContent='⏸';
-  startTracker();
-  highlightSec();
-  playNextChunk();
-}
-
-function playNextChunk(){
-  if(!isPlaying||currentChunkIndex>=audioChunks.length){
-    if(currentChunkIndex>=audioChunks.length){
-      isPlaying=false;
-      document.getElementById('btnPlay').textContent='▶';
-      stopTracker();
-      document.getElementById('audioFill').style.width='100%';
-      clearJ();
-    }
-    return;
-  }
-
-  // Mac/Safari fix: must re-select voice each chunk as it can get lost
-  if(!selectedVoice) selectBestVoice();
-
-  const chunk=audioChunks[currentChunkIndex];
-  const u=new SpeechSynthesisUtterance(chunk);
-  u.rate=currentSpeed;
-  u.pitch=1.0;
-  u.volume=1.0;
-  u.lang='en-US';
-
-  // Only set voice if we have one — on Mac, omitting voice uses system default which is fine
   if(selectedVoice) u.voice=selectedVoice;
-
-  u.onstart=()=>{
-    // Confirm audio started — helps debug Mac issues
-    console.log('Speaking chunk',currentChunkIndex,'/',audioChunks.length);
-  };
-
-  u.onend=()=>{
-    if(!isPlaying) return;
-    currentChunkIndex++;
-    const charsSpoken=audioChunks.slice(0,currentChunkIndex).join('').length;
-    charProgress=Math.min(charProgress+charsSpoken,fullAudioScript.length);
-    highlightSec();
-    // Small delay between chunks — helps Mac/Safari not drop utterances
-    setTimeout(()=>{ if(isPlaying) playNextChunk(); },80);
-  };
-
-  u.onerror=(e)=>{
-    console.warn('TTS error on chunk',currentChunkIndex,e.error);
-    if(e.error==='interrupted'||e.error==='canceled') return;
-    // Skip errored chunk and try next
-    currentChunkIndex++;
-    setTimeout(()=>{ if(isPlaying) playNextChunk(); },200);
-  };
-
-  // Mac Safari fix: cancel any pending speech before speaking new chunk
-  // (Safari queues differently from Chrome)
-  try{ synth.speak(u); } catch(err){ console.warn('speak error',err); }
-
-  // Chrome/Mac keepalive: Chrome pauses TTS after ~15s in background tabs
-  setTimeout(()=>{ if(isPlaying&&synth.speaking) synth.resume(); },10000);
+  u.onend=()=>{isPlaying=false;document.getElementById('btnPlay').textContent='▶';stopTracker();document.getElementById('audioFill').style.width='100%';clearJ();};
+  u.onerror=()=>{isPlaying=false;document.getElementById('btnPlay').textContent='▶';stopTracker();};
+  synth.speak(u); isPlaying=true; document.getElementById('btnPlay').textContent='⏸';
+  startTracker(); highlightSec();
 }
-
-function pauseAudio(){
-  synth.cancel();
-  isPlaying=false;
-  document.getElementById('btnPlay').textContent='▶';
-  stopTracker();
-}
-function stopAudio(){
-  synth.cancel();
-  isPlaying=false;
-  audioChunks=[];
-  currentChunkIndex=0;
-  document.getElementById('btnPlay').textContent='▶';
-  stopTracker();
-  document.getElementById('audioFill').style.width='0%';
-  document.getElementById('audioTime').textContent='0:00 / 0:00';
-  clearJ();
-}
+function pauseAudio(){synth.pause();isPlaying=false;document.getElementById('btnPlay').textContent='▶';stopTracker();}
+function stopAudio(){synth.cancel();isPlaying=false;document.getElementById('btnPlay').textContent='▶';stopTracker();document.getElementById('audioFill').style.width='0%';document.getElementById('audioTime').textContent='0:00 / 0:00';clearJ();}
 function clearJ(){document.querySelectorAll('.btn-jump').forEach(b=>b.classList.remove('playing'));document.querySelectorAll('.section-card').forEach(c=>c.classList.remove('playing-now'));}
 function jumpTo(key){const o=sectionOffsets.find(s=>s.key===key);if(o){charProgress=o.charStart;startFrom(charProgress);}}
 function startTracker(){
@@ -1510,17 +1347,8 @@ buildSectionIndex();
 renderSections();
 renderHistoryPanel();
 buildChatContextChips();
-// Mac/Safari: voices load asynchronously — must wait for onvoiceschanged
-if(synth.onvoiceschanged!==undefined){
-  synth.onvoiceschanged=()=>{
-    const v=synth.getVoices();
-    if(v&&v.length>0) selectBestVoice();
-  };
-}
-// Also try immediately and after delays — covers Chrome, Firefox, and Mac Safari
-setTimeout(()=>{ const v=synth.getVoices(); if(v&&v.length>0) selectBestVoice(); },100);
-setTimeout(()=>{ const v=synth.getVoices(); if(v&&v.length>0&&!selectedVoice) selectBestVoice(); },1000);
-setTimeout(()=>{ const v=synth.getVoices(); if(v&&v.length>0&&!selectedVoice) selectBestVoice(); },3000);
+if(synth.onvoiceschanged!==undefined) synth.onvoiceschanged=()=>{synth.getVoices();selectBestVoice();};
+setTimeout(()=>{synth.getVoices();selectBestVoice();},500);
 </script>
 </body>
 </html>
