@@ -930,6 +930,7 @@
 <p class="p2"><br></p>
 <p class="p1">// ── API CALL — NO TOOLS (browser CORS blocks tool_use, causes silent failures) ──</p>
 <p class="p1">async function callAPI(prompt, maxTokens=1200){</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// Read body ONCE as text — avoids "body already used" errors</p>
 <p class="p1"><span class="Apple-converted-space">  </span>const res=await fetch('https://api.anthropic.com/v1/messages',{</p>
 <p class="p1"><span class="Apple-converted-space">    </span>method:'POST',</p>
 <p class="p1"><span class="Apple-converted-space">    </span>headers:{'Content-Type':'application/json'},</p>
@@ -939,15 +940,35 @@
 <p class="p1"><span class="Apple-converted-space">      </span>messages:[{role:'user',content:prompt}]</p>
 <p class="p1"><span class="Apple-converted-space">    </span>})</p>
 <p class="p1"><span class="Apple-converted-space">  </span>});</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>// Read body once as text</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const bodyText=await res.text();</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>// Parse JSON defensively</p>
+<p class="p1"><span class="Apple-converted-space">  </span>let data;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>try{ data=JSON.parse(bodyText); }</p>
+<p class="p1"><span class="Apple-converted-space">  </span>catch(e){ throw new Error('Bad JSON from server'); }</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>// Handle HTTP errors AFTER reading body</p>
 <p class="p1"><span class="Apple-converted-space">  </span>if(!res.ok){</p>
-<p class="p1"><span class="Apple-converted-space">    </span>// Try to get error detail</p>
-<p class="p1"><span class="Apple-converted-space">    </span>let msg='HTTP '+res.status;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>try{const e=await res.json();msg=e.error?.message||msg;}catch(ex){}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const msg=data?.error?.message||data?.error?.type||('HTTP '+res.status);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>if(res.status===429) throw new Error('Rate limit — retrying');</p>
 <p class="p1"><span class="Apple-converted-space">    </span>throw new Error(msg);</p>
 <p class="p1"><span class="Apple-converted-space">  </span>}</p>
-<p class="p1"><span class="Apple-converted-space">  </span>const data=await res.json();</p>
-<p class="p1"><span class="Apple-converted-space">  </span>const text=data.content?.filter(b=&gt;b.type==='text')?.map(b=&gt;b.text)?.join('\n')||'';</p>
-<p class="p1"><span class="Apple-converted-space">  </span>if(!text.trim()) throw new Error('Empty response');</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>// Extract text — handle all content formats</p>
+<p class="p1"><span class="Apple-converted-space">  </span>let text='';</p>
+<p class="p1"><span class="Apple-converted-space">  </span>if(Array.isArray(data.content)){</p>
+<p class="p1"><span class="Apple-converted-space">    </span>text=data.content</p>
+<p class="p1"><span class="Apple-converted-space">      </span>.filter(b=&gt;b&amp;&amp;b.type==='text'&amp;&amp;b.text)</p>
+<p class="p1"><span class="Apple-converted-space">      </span>.map(b=&gt;b.text)</p>
+<p class="p1"><span class="Apple-converted-space">      </span>.join('\n')</p>
+<p class="p1"><span class="Apple-converted-space">      </span>.trim();</p>
+<p class="p1"><span class="Apple-converted-space">  </span>} else if(typeof data.content==='string'){</p>
+<p class="p1"><span class="Apple-converted-space">    </span>text=data.content.trim();</p>
+<p class="p1"><span class="Apple-converted-space">  </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>if(!text) throw new Error('Empty response (stop: '+(data.stop_reason||'?')+')');</p>
 <p class="p1"><span class="Apple-converted-space">  </span>return text;</p>
 <p class="p1">}</p>
 <p class="p2"><br></p>
@@ -979,7 +1000,7 @@
 <p class="p1"><span class="Apple-converted-space">  </span>for(let i=0;i&lt;SECTIONS.length;i++){</p>
 <p class="p1"><span class="Apple-converted-space">    </span>await generateSection(SECTIONS[i]);</p>
 <p class="p1"><span class="Apple-converted-space">    </span>tick();</p>
-<p class="p1"><span class="Apple-converted-space">    </span>if(i&lt;SECTIONS.length-1) await new Promise(r=&gt;setTimeout(r,1500));</p>
+<p class="p1"><span class="Apple-converted-space">    </span>if(i&lt;SECTIONS.length-1) await new Promise(r=&gt;setTimeout(r,3000));</p>
 <p class="p1"><span class="Apple-converted-space">  </span>}</p>
 <p class="p2"><br></p>
 <p class="p1"><span class="Apple-converted-space">  </span>document.getElementById('progressLabel').textContent='✦ All 26 sections complete — Good morning, Crystal! 🏛️';</p>
