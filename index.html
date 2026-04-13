@@ -945,12 +945,14 @@ async function generateBriefing(){
 
   let done=0;
   const total=SECTIONS.length;
-  const tick=()=>{done++;document.getElementById('progressFill').style.width=Math.round(done/total*100)+'%';document.getElementById('progressLabel').textContent=`Loading ${done} of ${total} sections...`;};
+  const tick=()=>{done++;document.getElementById('progressFill').style.width=Math.round(done/total*100)+'%';document.getElementById('progressLabel').textContent=`Loading section ${done} of ${total} — est. ${Math.round((total-done)*5)} seconds remaining...`;};
 
-  // Batch of 2 with delay — reliable and avoids rate limits
-  for(let i=0;i<SECTIONS.length;i+=2){
-    await Promise.all(SECTIONS.slice(i,i+2).map(async s=>{await generateSection(s);tick();}));
-    if(i+2<SECTIONS.length) await new Promise(r=>setTimeout(r,400));
+  // Sequential — one at a time with delay to avoid 30k token/min rate limit
+  // Live web search uses more tokens so we need more breathing room
+  for(let i=0;i<SECTIONS.length;i++){
+    await generateSection(SECTIONS[i]);
+    tick();
+    if(i<SECTIONS.length-1) await new Promise(r=>setTimeout(r,5000));
   }
 
   document.getElementById('progressLabel').textContent='✦ Briefing complete — Good morning, Crystal';
